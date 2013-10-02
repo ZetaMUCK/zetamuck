@@ -1922,8 +1922,9 @@ prim_pmatch(PRIM_PROTOTYPE)
                                 ref = AMBIGUOUS;
                                 break;
                             }
+                        } else {
+                            ref = pdbref(result);
                         }
-                        ref = pdbref(result);
                     }
                 }
             }
