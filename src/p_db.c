@@ -1880,7 +1880,7 @@ prim_checkpassword(PRIM_PROTOTYPE)
 void
 prim_pmatch(PRIM_PROTOTYPE)
 {
-    dbref ref;
+    dbref ref, dupref;
     char *buff;
     char buf[BUFFER_LEN];
     int result;
@@ -1917,11 +1917,13 @@ prim_pmatch(PRIM_PROTOTYPE)
                 for (result = pcount(); result; result--) {
                     if (string_prefix(PNAME(pdbref(result)), buff)) {
                         if (ref != NOTHING) {
-                            ref = AMBIGUOUS;
-                            break;
-                        } else {
-                            ref = pdbref(result);
+                            dupref = pdbref(result);
+                            if (dupref != ref) {
+                                ref = AMBIGUOUS;
+                                break;
+                            }
                         }
+                        ref = pdbref(result);
                     }
                 }
             }
