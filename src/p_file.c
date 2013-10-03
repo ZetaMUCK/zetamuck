@@ -57,160 +57,149 @@ char *
 parse_token(char *filename)
 {
     char *temp;
+    char tempBuf[BUFFER_LEN];
+    static char tempBuf2[BUFFER_LEN];
 
-    if (strstr(filename, "$WELCOME.TXT") != NULL)
-        return (char *)"data/welcome.txt";
-    if (strstr(filename, "$WELCOME.HTML") != NULL)
-        return (char *)"data/welcome.html";
-    if (strstr(filename, "$NEWS.TXT") != NULL)
-        return (char *)"data/news.txt";
-    if (strstr(filename, "$MOTD.TXT") != NULL)
-        return (char *)"data/motd.txt";
-    if (strstr(filename, "$CONNECT.TXT") != NULL)
-        return (char *)"data/connect.txt";
-    if (strstr(filename, "$HELP.TXT") != NULL)
-        return (char *)"data/help.txt";
-    if (strstr(filename, "$MAN.TXT") != NULL)
-        return (char *)"data/man.txt";
-    if (strstr(filename, "$SYSPARMS.TXT") != NULL)
-        return (char *)"data/sysparms.txt";
-    if (strstr(filename, "$MPIHELP.TXT") != NULL)
-        return (char *)"data/mpihelp.txt";
+    tempBuf[0] = '\0';
+    tempBuf2[0] = '\0';
+
+    if (strstr(filename, "$WELCOME.TXT") != NULL) {
+        strcpy(tempBuf2, "data/welcome.txt");
+    } else if (strstr(filename, "$WELCOME.HTML") != NULL) {
+        strcpy(tempBuf2, "data/welcome.html");
+    } else if (strstr(filename, "$NEWS.TXT") != NULL) {
+        strcpy(tempBuf2, "data/news.txt");
+    } else if (strstr(filename, "$MOTD.TXT") != NULL) {
+        strcpy(tempBuf2, "data/motd.txt");
+    } else if (strstr(filename, "$CONNECT.TXT") != NULL) {
+        strcpy(tempBuf2, "data/connect.txt");
+    } else if (strstr(filename, "$HELP.TXT") != NULL) {
+        strcpy(tempBuf2, "data/help.txt");
+    } else if (strstr(filename, "$MAN.TXT") != NULL) {
+        strcpy(tempBuf2, "data/man.txt");
+    } else if (strstr(filename, "$SYSPARMS.TXT") != NULL) {
+        strcpy(tempBuf2, "data/sysparms.txt");
+    } else if (strstr(filename, "$MPIHELP.TXT") != NULL) {
+        strcpy(tempBuf2, "data/mpihelp.txt");
+    }
+    if (*tempBuf2) {
+        return tempBuf2;
+    }
     if ((temp = strstr(filename, "$NEWS/")) != NULL) {
-        char tempBuf[BUFFER_LEN] = "";
-        char tempBuf2[BUFFER_LEN] = "data/news/";
+        strcpy(tempBuf2, "data/news/");
         int i = 0;
 
         temp += 6;
         for (; *temp != '\0'; temp++, i++)
             tempBuf[i] = *temp;
-        i++;
         tempBuf[i] = '\0';
         strcat(tempBuf2, tempBuf);
         filename = tempBuf2;
         return filename;
     }
     if ((temp = strstr(filename, "$HELP/")) != NULL) {
-        char tempBuf[BUFFER_LEN] = "";
-        char tempBuf2[BUFFER_LEN] = "data/help/";
+        strcpy(tempBuf2, "data/help/");
         int i = 0;
 
         temp += 6;
         for (; *temp != '\0'; temp++, i++)
             tempBuf[i] = *temp;
-        i++;
         tempBuf[i] = '\0';
         strcat(tempBuf2, tempBuf);
         filename = tempBuf2;
         return filename;
     }
     if ((temp = strstr(filename, "$MUF/")) != NULL) {
-        char tempBuf[BUFFER_LEN] = "";
-        char tempBuf2[BUFFER_LEN] = "muf/";
+        strcpy(tempBuf2, "muf/");
         int i = 0;
 
         temp += 5;
         for (; *temp != '\0'; temp++, i++)
             tempBuf[i] = *temp;
-        i++;
         tempBuf[i] = '\0';
         strcat(tempBuf2, tempBuf);
         filename = tempBuf2;
         return filename;
     }
     if ((temp = strstr(filename, "$LOGS/")) != NULL) {
-        char tempBuf[BUFFER_LEN] = "";
-        char tempBuf2[BUFFER_LEN] = "logs/";
+        strcpy(tempBuf2, "logs/");
         int i = 0;
 
         temp += 6;
         for (; *temp != '\0'; temp++, i++)
             tempBuf[i] = *temp;
-        i++;
         tempBuf[i] = '\0';
         strcat(tempBuf2, tempBuf);
         filename = tempBuf2;
         return filename;
     }
     if ((temp = strstr(filename, "$INFO/")) != NULL) {
-        char tempBuf[BUFFER_LEN] = "";
-        char tempBuf2[BUFFER_LEN] = "data/info/";
+        strcpy(tempBuf2, "data/info/");
         int i = 0;
 
         temp += 6;
         for (; *temp != '\0'; temp++, i++)
             tempBuf[i] = *temp;
-        i++;
         tempBuf[i] = '\0';
         strcat(tempBuf2, tempBuf);
         filename = tempBuf2;
         return filename;
     }
     if ((temp = strstr(filename, "$MAN/")) != NULL) {
-        char tempBuf[BUFFER_LEN] = "";
-        char tempBuf2[BUFFER_LEN] = "data/man/";
+        strcpy(tempBuf2, "data/man/");
         int i = 0;
 
         temp += 5;
         for (; *temp != '\0'; temp++, i++)
             tempBuf[i] = *temp;
-        i++;
         tempBuf[i] = '\0';
         strcat(tempBuf2, tempBuf);
         filename = tempBuf2;
         return filename;
     }
     if ((temp = strstr(filename, "$MPIHELP/")) != NULL) {
-        char tempBuf[BUFFER_LEN] = "";
-        char tempBuf2[BUFFER_LEN] = "data/mpihelp/";
+        strcpy(tempBuf2, "data/mpihelp/");
         int i = 0;
 
         temp += 9;
         for (; *temp != '\0'; temp++, i++)
             tempBuf[i] = *temp;
-        i++;
         tempBuf[i] = '\0';
         strcat(tempBuf2, tempBuf);
         filename = tempBuf2;
         return filename;
     }
     if ((temp = strstr(filename, "$WELCOME/")) != NULL) {
-        char tempBuf[BUFFER_LEN] = "";
-        char tempBuf2[BUFFER_LEN] = "data/welcome/";
+        strcpy(tempBuf2, "data/welcome/");
         int i = 0;
 
         temp += 9;
         for (; *temp != '\0'; temp++, i++)
             tempBuf[i] = *temp;
-        i++;
         tempBuf[i] = '\0';
         strcat(tempBuf2, tempBuf);
         filename = tempBuf2;
         return filename;
     }
     if ((temp = strstr(filename, "$PUBLIC_HTML/")) != NULL) {
-        char tempBuf[BUFFER_LEN] = "";
-        char tempBuf2[BUFFER_LEN] = "../../public_html/";
+        strcpy(tempBuf2, "../../public_html/");
         int i = 0;
 
         temp += 13;
         for (; *temp != '\0'; temp++, i++)
             tempBuf[i] = *temp;
-        i++;
         tempBuf[i] = '\0';
         strcat(tempBuf2, tempBuf);
         filename = tempBuf2;
         return filename;
     }
     if ((temp = strstr(filename, "$WWW/")) != NULL) {
-        char tempBuf[BUFFER_LEN] = "";
-        char tempBuf2[BUFFER_LEN] = "../../www/";
+        strcpy(tempBuf2, "../../www/");
         int i = 0;
 
         temp += 4;
         for (; *temp != '\0'; temp++, i++)
             tempBuf[i] = *temp;
-        i++;
         tempBuf[i] = '\0';
         strcat(tempBuf2, tempBuf);
         filename = tempBuf2;
@@ -1261,6 +1250,7 @@ prim_mkdir(PRIM_PROTOTYPE)
     /* Everything has been checked, make the directory now */
     result = mkdir(directoryName, S_IRWXU);
     result = !result;
+    CLEAR(oper1);
     PushInt(result);
 }
 
