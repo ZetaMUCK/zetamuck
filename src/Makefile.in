@@ -13,14 +13,15 @@
 # Optimizations
 # -O			General optimizations, recomended.
 # -O2			Heavier optimizations, use at own risk.
+# -O0           No optimizations, useful inside of debuggers.
 #
-# ProtoMUCK will now compile 99.8% warning free with -Wall turned on.
-#   -Hinoserm, 7-31-2003. 
+# Code comitted to trunk should not generate compiler warnings.
 #
-# -g used to be set here, and it's still the default. Use --with-debug=#
-# to set a higher debugging level, or --without-debug to not use -g at all.
-# Note that --enable-debug=all overrides your -O setting, as it forces -O0.
-#   -Davin
+# Use ./configure --with-debug=# to set a higher debugging level, or
+# --without-debug to compile without -g at all.
+#
+# --enable-debug=full is a shortcut for -g3 -O0.
+# --enable-profiling generates profiling data for gprof. Rarely needed.
 
 OPTIM=-Wall -O2 -U_FORTIFY_SOURCE
 
@@ -40,7 +41,7 @@ DEST=${ROOT}/game
 # 		Variables set by the configure script.
 # #######################################################################
 CC=@CC@
-CXX=@CXX@
+#CXX=@CXX@
 DEFS=@DEFS@
 LIBR=@LIBS@
 
@@ -52,12 +53,12 @@ LIBR=@LIBS@
 # Include path, Cflags...
 #
 CFLAGS=${OPTIM} @DEBUG_FLAGS@ ${DEFS} -I${INCLUDE} @INC@ @INCL@
-CXXFLAGS=${OPTIM} ${DEFS} -I${INCLUDE} @INC@ @INCL@
+#CXXFLAGS=${OPTIM} ${DEFS} -I${INCLUDE} @INC@ @INCL@
 
 #
 # for saving old copies.
 #
-MV= -mv -f
+MV= mv -f
 RM= -rm -f
 
 #
@@ -120,7 +121,7 @@ all:    ${TARGETS}
 muck:	protomuck
 
 protomuck:        ${P} ${COBJ} interface.o
-	${MV} protomuck protomuck~
+	@if [ -r protomuck ]; then ${MV} protomuck protomuck~; fi
 	@echo "`bash -c set | grep OSTYPE`"
 	@if [ "`bash -c set | grep OSTYPE`" = "OSTYPE=cygwin" ]; then \
          echo ${PRE} ${CC} -Wl,--heap,268435456,--stack,16777216 ${CFLAGS} -o protomuck ${COBJ} interface.o ${LIBR}; \
@@ -171,6 +172,9 @@ cert game/server.pem:
 # Funky stuff for debugging and coding work.
 #
 
+svnver:
+	sed -i 's/#define SVNVER .*/#define SVNVER "'`svnversion .`'"/' inc/version.h
+
 saber_src:
 	#load ${CFLAGS} ${CSRC}
 
@@ -189,6 +193,7 @@ names:
 ########################################################
 # Cleanup stuff.
 #
+
 
 test:	protomuck
 	cp protomuck ${HOME}/proto/game/protomuck
