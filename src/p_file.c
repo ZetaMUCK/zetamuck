@@ -22,6 +22,7 @@ extern dbref ref;
 extern char buf[BUFFER_LEN];
 char *tempc = NULL;
 char *directory = (char *)"$";
+int primsdir_len = sizeof(FILE_PRIMS_DIRECTORY);
 
 
 #ifdef WIN_VC
@@ -32,9 +33,10 @@ int getgid(void) { return 0; }
 char *
 set_directory(char *filename)
 {
-    static char tempbuf[BUFFER_LEN] = FILE_PRIMS_DIRECTORY;
+    static char tempbuf[BUFFER_LEN];
 
-    strcpy(tempbuf, filename);
+    strcpy(tempbuf, FILE_PRIMS_DIRECTORY);
+    strcpy(tempbuf + (primsdir_len - 1), filename);
     filename = tempbuf;
     return filename;
 }
