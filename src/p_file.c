@@ -34,7 +34,7 @@ set_directory(char *filename)
 {
     static char tempbuf[BUFFER_LEN] = FILE_PRIMS_DIRECTORY;
 
-    strcat(tempbuf, filename);
+    strcpy(tempbuf, filename);
     filename = tempbuf;
     return filename;
 }
