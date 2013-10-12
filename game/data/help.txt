@@ -3821,7 +3821,7 @@ arrive     - When a player arrives.
 depart     - When a player departs.
 idle       - When a player idles.
 unidle     - When a player unidles.
-look       - When something is looked at.
+lookq      - When something is looked at. (executes after contents list)
 login      - When a connection is made to the login screen.
 disclogin  - When a connection drops from the login screen.
 @dump      - On #0 only as @dump, triggered when the MUCK saves the db.
