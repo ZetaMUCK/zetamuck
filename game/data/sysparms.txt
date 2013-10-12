@@ -547,7 +547,7 @@ do_mpi_parsing
 Turning this off prevents text from being sent through the MPI parser.
 ~~~
 look_propqueues
-Turning this on allows _look/ propqueue hooks.
+Turning this on allows _lookq/ propqueue hooks.
 ~~~
 dump_propqueues
 This enables a @dumpwarn and @dump propqueue to be used on #0.
