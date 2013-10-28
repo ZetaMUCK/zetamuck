@@ -138,7 +138,7 @@ lookup_alias(const char *name, int checkname)
  * alias hint if it's going to get overwritten by the caller anyway. */
 int
 rotate_alias(dbref target, int killold) {
-    const char *oldalias = NULL;
+    char *oldalias = NULL;
     PropPtr pptr;
     int valid;
 
@@ -146,9 +146,8 @@ rotate_alias(dbref target, int killold) {
     pptr = get_property(0, abuf);
     if (pptr) {
         if ((valid = PropType(pptr) == PROP_STRTYP)) {
-            oldalias = PropDataUNCStr(pptr);
+            oldalias = strdup(PropDataUNCStr(pptr));
         }
-
         if (killold || !valid) {
             /* kill the old 'last' hint if we were asked to, or if it's bogus */
             remove_property(0, abuf);
@@ -157,6 +156,7 @@ rotate_alias(dbref target, int killold) {
             /* kill the old alias. */
             sprintf(abuf, ALIASDIR_CUR "%s", oldalias);
             remove_property(0, abuf);
+            free(oldalias);
             return 1;
         }
     }
