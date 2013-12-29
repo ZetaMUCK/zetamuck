@@ -900,7 +900,9 @@ prim_strcat(PRIM_PROTOTYPE)
     oper2 = POP();
     if (oper1->type != PROG_STRING || oper2->type != PROG_STRING)
         abort_interp("Non-string argument.");
-    len = oper2->data.string->length + oper1->data.string->length;
+    if (oper2->data.string && oper1->data.string) {
+        len = oper2->data.string->length + oper1->data.string->length;
+    }
     if (!oper1->data.string && !oper2->data.string)
         string = NULL;
     else if (!oper2->data.string) {
@@ -913,7 +915,8 @@ prim_strcat(PRIM_PROTOTYPE)
         abort_interp("Operation would result in overflow.");
     } else {
         bcopy(oper2->data.string->data, buf, oper2->data.string->length);
-        bcopy(oper1->data.string->data, buf + len + 1);
+        bcopy(oper1->data.string->data, buf + oper2->data.string->length,
+              oper1->data.string->length + 1);
         string = alloc_prog_string_exact(buf, len, -2);
     }
     CLEAR(oper1);

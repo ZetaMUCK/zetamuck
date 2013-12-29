@@ -1976,7 +1976,11 @@ prim_array_interpret(PRIM_PROTOTYPE)
         switch (in->type) {
             case PROG_STRING:
                 text = DoNullInd(in->data.string);
-                tmplen = in->data.string->length;
+                if (in->data.string) {
+                    tmplen = in->data.string->length;
+                } else {
+                    tmplen = 0;
+                }
                 break;
             case PROG_INTEGER:
                 sprintf(buf, "%d", in->data.number);
