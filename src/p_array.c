@@ -1972,11 +1972,11 @@ prim_array_interpret(PRIM_PROTOTYPE)
     done = !array_first(arr, &temp1);
     while (!done) {
         in = array_getitem(arr, &temp1);
-        templen = -1;
+        tmplen = -1;
         switch (in->type) {
             case PROG_STRING:
                 text = DoNullInd(in->data.string);
-                templen = in->data.string->length;
+                tmplen = in->data.string->length;
                 break;
             case PROG_INTEGER:
                 sprintf(buf, "%d", in->data.number);
@@ -1985,22 +1985,22 @@ prim_array_interpret(PRIM_PROTOTYPE)
             case PROG_OBJECT:
                 if (in->data.number == -1) {
                     text = "*NOTHING*";
-                    templen = 9;
+                    tmplen = 9;
                     break;
                 }
                 if (in->data.number == -2) {
                     text = "*AMBIGUOUS(#-2)*";
-                    templen = 15;
+                    tmplen = 15;
                     break;
                 }
                 if (in->data.number == -3) {
                     text = "*HOME*";
-                    templen = 6;
+                    tmplen = 6;
                     break;
                 }
                 if (in->data.number == -4) {
                     text = "*NIL*";
-                    templen = 5;
+                    tmplen = 5;
                     break;
                 }
                 if (in->data.number < -4) {
@@ -2025,7 +2025,7 @@ prim_array_interpret(PRIM_PROTOTYPE)
                 break;
             default:
                 text = "<UNSUPPORTED>";
-                templen = 13;
+                tmplen = 13;
                 break;
         }
         /*
