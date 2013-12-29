@@ -145,6 +145,7 @@ extern dbref find_uid(dbref player, struct frame *fr, int st, dbref program);
 #define PushStrRaw(x)   push(arg, top, PROG_STRING, MIPSCAST x)
 #define PushString(x)   PushStrRaw(alloc_prog_string(x))
 #define PushNullStr     PushStrRaw(0)
+#define PushStringExact(x,y,z)   PushStrRaw(alloc_prog_string_exact(x,y,z))
 
 #define PushArrayRaw(x) push(arg, top, PROG_ARRAY, MIPSCAST x)
 #define PushNullArray   PushArrayRaw(0)

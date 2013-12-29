@@ -2057,7 +2057,7 @@ prim_array_interpret(PRIM_PROTOTYPE)
 
     CLEAR(oper1);
 
-    PushString(outbuf);
+    PushStringExact(outbuf, ptr - outbuf, -2);
 }
 
 

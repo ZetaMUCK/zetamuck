@@ -893,12 +893,14 @@ void
 prim_strcat(PRIM_PROTOTYPE)
 {
     struct shared_string *string;
+    int len;
 
     CHECKOP(2);
     oper1 = POP();
     oper2 = POP();
     if (oper1->type != PROG_STRING || oper2->type != PROG_STRING)
         abort_interp("Non-string argument.");
+    len = oper2->data.string->length + oper1->data.string->length;
     if (!oper1->data.string && !oper2->data.string)
         string = NULL;
     else if (!oper2->data.string) {
@@ -907,14 +909,12 @@ prim_strcat(PRIM_PROTOTYPE)
     } else if (!oper1->data.string) {
         oper2->data.string->links++;
         string = oper2->data.string;
-    } else if (oper1->data.string->length + oper2->data.string->length
-               > (BUFFER_LEN) - 1) {
+    } else if (len > (BUFFER_LEN) - 1) {
         abort_interp("Operation would result in overflow.");
     } else {
         bcopy(oper2->data.string->data, buf, oper2->data.string->length);
-        bcopy(oper1->data.string->data, buf + oper2->data.string->length,
-              oper1->data.string->length + 1);
-        string = alloc_prog_string(buf);
+        bcopy(oper1->data.string->data, buf + len + 1);
+        string = alloc_prog_string_exact(buf, len, -2);
     }
     CLEAR(oper1);
     CLEAR(oper2);
