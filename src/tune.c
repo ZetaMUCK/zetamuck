@@ -145,6 +145,7 @@ int tp_start_pennies = START_PENNIES;
 int tp_command_burst_size = COMMAND_BURST_SIZE;
 int tp_commands_per_time = COMMANDS_PER_TIME;
 int tp_command_time_msec = COMMAND_TIME_MSEC;
+int tp_keepalive_interval = KEEPALIVE_INTERVAL;
 int tp_max_delta_objs = MAX_DELTA_OBJS;
 int tp_max_loaded_objs = MAX_LOADED_OBJS;
 int tp_max_process_limit = MAX_PROCESS_LIMIT;
@@ -209,6 +210,7 @@ struct tune_val_entry tune_val_list[] = {
     {"System", "command_burst_size", &tp_command_burst_size, LARCH, LMUF},
     {"System", "commands_per_time", &tp_commands_per_time, LARCH, LMUF},
     {"System", "command_time_msec", &tp_command_time_msec, LARCH, LMUF},
+    {"System", "keepalive_interval", &tp_keepalive_interval, LARCH, LMUF},
     {"Database", "max_delta_objs", &tp_max_delta_objs, LARCH, LMUF},
     {"Database", "max_loaded_objs", &tp_max_loaded_objs, LARCH, LMUF},
     {"Database", "wizhidden_access_bit", &tp_wizhidden_access_bit, WBOY, LMAGE},

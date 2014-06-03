@@ -76,6 +76,7 @@ extern int tp_start_pennies;
 extern int tp_command_burst_size;
 extern int tp_commands_per_time;
 extern int tp_command_time_msec;
+extern int tp_keepalive_interval;
 
 extern int tp_max_delta_objs;
 extern int tp_max_loaded_objs;

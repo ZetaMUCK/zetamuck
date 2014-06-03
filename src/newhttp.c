@@ -386,7 +386,7 @@ http_sendredirect(struct descriptor_data *d, const char *url)
     queue_text(d, buf);
 
     d->http->close = 1;
-    d->booted = 4;
+    d->booted = BOOT_SAFE;
 
     free((void *) host);
 }
@@ -420,7 +420,7 @@ http_senderror(struct descriptor_data *d, int statcode, const char *msg)
 
     d->http->body.elen = 0;
     d->http->body.len = 0;
-    d->booted = 4;
+    d->booted = BOOT_SAFE;
     return;
 }
 
@@ -782,7 +782,7 @@ http_dohtmuf(struct descriptor_data *d, const char *prop)
 
         d->http->pid = tmpfr->pid;
     }
-    d->booted = 4;
+    d->booted = BOOT_SAFE;
     return 1;
 }
 
@@ -837,7 +837,7 @@ http_doproplist(struct descriptor_data *d, dbref what, const char *prop,
         }
     }
 
-    d->booted = 4;
+    d->booted = BOOT_SAFE;
     return i;
 }
 
@@ -979,7 +979,7 @@ http_dofile(struct descriptor_data *d)
             http_sendredirect(d, buf);
         } else {
             http_listdir(d, buf, df);
-            d->booted = 4;
+            d->booted = BOOT_SAFE;
         }
 
         closedir(df);
@@ -1025,7 +1025,7 @@ http_doprop(struct descriptor_data *d, const char *prop)
         http_sendredirect(d, m);
     }
 
-    d->booted = 4;
+    d->booted = BOOT_SAFE;
     return 1;
 }
 
@@ -1320,11 +1320,11 @@ http_finish(struct descriptor_data *d)
                  d->http->body.len);
 
     /* If we've gotten this far, the client is waiting for us to respond. 
-     * We set the DF_POLLING flag here so that the connection is immune to
+     * We set the DF_KEEPALIVEflag here so that the connection is immune to
      * idleboot processing. This flag gets reset in interface.c when d->http is
      * reinitialized for the next persistent connection. */
 
-    DR_RAW_ADD_FLAGS(d, DF_POLLING);
+    DR_RAW_ADD_FLAGS(d, DF_KEEPALIVE);
 
     if (http_parsedest(d))
         return;

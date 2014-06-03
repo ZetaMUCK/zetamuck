@@ -244,7 +244,7 @@ queue_write(t_descr * d, char *format, ...)
 
     if (writesocket(d->descriptor, buf, strlen(buf)) < 0) {
         if (errno != EWOULDBLOCK)
-            d->booted = 1;
+            d->booted = BOOT_DROP;
         return;
     }
 
@@ -378,7 +378,7 @@ do_command(t_descr * d, const char *cmd)
         if ((q = get_hostname(a)))
             queue_write(d, "HOST %X,%s", a, q);
     } else if (!strncmp(cmd, "QUIT", 4)) {
-        d->booted = 1;
+        d->booted = BOOT_DROP;
     }
 }
 
@@ -390,7 +390,7 @@ process_input(t_descr * d)
     char *p, *pend, *q, *qend;
 
     if ((got = readsocket(d->descriptor, buf, sizeof buf)) <= 0) {
-        d->booted = 1;
+        d->booted = BOOT_DROP;
         return;
     }
 

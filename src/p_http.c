@@ -46,7 +46,7 @@ prim_descr_safeboot(PRIM_PROTOTYPE)
     if (!(d = descrdata_by_descr(oper1->data.number)))
         abort_interp("Invalid descriptor.");
 
-    d->booted = 4;
+    d->booted = BOOT_SAFE;
 
     CLEAR(oper1);
 }

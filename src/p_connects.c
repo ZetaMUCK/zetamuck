@@ -55,6 +55,10 @@ check_descr_flag(char *dflag)
         return DF_WEBCLIENT;
     if (string_prefix("df_misc", dflag))
         return DF_MISC;
+    if (string_prefix("df_keepalive", dflag))
+        return DF_KEEPALIVE;
+    if (string_prefix("df_telnet", dflag))
+        return DF_TELNET;
 #ifdef MCCP_ENABLED
     if (string_prefix("df_compress", dflag))
         return DF_COMPRESS;
@@ -1233,13 +1237,9 @@ prim_getdescrinfo(PRIM_PROTOTYPE)
     CLEAR(&temp1);
     CLEAR(&temp2);
 	temp1.type = PROG_STRING;
-    temp1.data.string = alloc_prog_string("TERMTYPE");
-    temp2.type = PROG_STRING;
-	if (d->telopt.termtype)
-		temp2.data.string = alloc_prog_string(d->telopt.termtype);
-	else
-		temp2.data.string = alloc_prog_string("<unknown>");
-    array_setitem(&nw, &temp1, &temp2);
+    temp1.data.string = alloc_prog_string("MTTS");
+    temp2.type = PROG_INTEGER;
+    temp2.data.number = d->telopt.mtts;
     CLEAR(&temp1);
     CLEAR(&temp2);
 #ifdef IPV6
@@ -1310,6 +1310,19 @@ prim_getdescrinfo(PRIM_PROTOTYPE)
     array_setitem(&nw, &temp1, &temp2);
     CLEAR(&temp1);
     CLEAR(&temp2);
+    temp1.type = PROG_STRING;
+    temp1.data.string = alloc_prog_string("TERMTYPES");
+    temp2.type = PROG_ARRAY;
+    temp2.data.array = d->telopt.termtypes;
+    array_setitem(&nw, &temp1, &temp2);
+    CLEAR(&temp1);
+    // don't clear temp2 for TERMTYPES
+    temp1.type = PROG_STRING;
+    temp1.data.string = alloc_prog_string("TERMTYPE");
+    temp2 = d->telopt.termtypes->data.packed[0];
+    array_setitem(&nw, &temp1, &temp2);
+    CLEAR(&temp1);
+    // don't clear temp2 for TERMTYPE
 
     PushArrayRaw(nw);
 }
@@ -1400,10 +1413,22 @@ prim_descr_set(PRIM_PROTOTYPE)
     if (!d)                     /* Just to be safe. Shouldn't ever happen anyway. */
         abort_interp("Invalid descriptor.");
 
-    if (!result)
+    if (!result) {
+        // If we're setting DF_TELNET on a connection that does not have the
+        // flag set already, honor the ascii_descrs @tune and advertise our
+        // telnet capabilities to the client. Mostly useful on CT_MUF
+        // connections. No one to blame but yourself if you do this on CT_HTTP.
+        if (flagValue == DF_TELNET && !DR_RAW_FLAGS(d, DF_TELNET)) {
+            if (tp_ascii_descrs) {
+                d->encoding = ENC_ASCII;
+            }
+            telopt_advertise(d);
+        }
+        
         DR_RAW_ADD_FLAGS(d, flagValue);
-    else
+    } else {
         DR_RAW_REM_FLAGS(d, flagValue);
+    }
 
     CLEAR(oper1);
     CLEAR(oper2);
@@ -1528,6 +1553,7 @@ prim_mccp_end(PRIM_PROTOTYPE)
     mccp_end(d);
 #endif
 }
+
 
 
 void

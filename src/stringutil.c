@@ -1102,7 +1102,7 @@ alloc_prog_string_exact(const char *s, int length, int wclength)
         length = strlen(s);
     }
     if ((ss = (struct shared_string *)
-         malloc(sizeof(struct shared_string) + length)) == NULL) {
+        malloc(sizeof(struct shared_string) + length)) == NULL) {
         fprintf(stderr, "PANIC: alloc_prog_string() Out of Memory.\n");
         abort();
     }
@@ -1115,7 +1115,19 @@ alloc_prog_string_exact(const char *s, int length, int wclength)
     return (ss);
 }
 
+
 #endif
+
+void
+sstring_free(struct shared_string *ss)
+{
+    /* Black magic. The size of a shared_string is malloc'd as the struct plus
+     * the length of the string, and the string is written into the extra space.
+     * Freeing the struct therefore frees the string. */
+    if (ss && --ss->links == 0)
+        free((void *) ss);
+}
+
 
 #if !defined(MALLOC_PROFILING)
 char *

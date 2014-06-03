@@ -101,10 +101,10 @@
 #define MAX_DELTA_OBJS 20  /* max %age of objs changed before a full dump */
 
 /* player spam input limiters */
-#define COMMAND_BURST_SIZE 500  /* commands allowed per user in a burst */
-#define COMMANDS_PER_TIME 20    /* commands per time slice after burst  */
-#define COMMAND_TIME_MSEC 1000  /* time slice length in milliseconds    */
-
+#define COMMAND_BURST_SIZE 500  /* commands allowed per user in a burst  */
+#define COMMANDS_PER_TIME 20    /* commands per time slice after burst   */
+#define COMMAND_TIME_MSEC 1000  /* time slice length in milliseconds     */
+#define KEEPALIVE_INTERVAL 1    /* minutes between TELNET NOP keepalives */
 
 /* Max %of db in unchanged objects allowed to be loaded.  Generally 5% */
 /* This is only needed if you defined DISKBASED in config.h */

@@ -46,6 +46,22 @@
 #define TELOPT_MSSP_VAL '\x02'
 #define TELOPT_CHARSET  '\x2A'
 
+#define TELOPT_BRK      '\xF3'
+#define TELOPT_IP       '\xF4'
+
+#define TELOPT_EC       '\xF7'
+#define TELOPT_EL       '\xF8'
+
+#define TELOPT_NOP      '\xF1'
+#define TELOPT_AO       '\xF5'
+#define TELOPT_AYT      '\xF6'
+
+#define BOOT_DROP       1 /* the most common case, server choosing to disconnect client */
+#define BOOT_QUIT       2 /* player QUIT command */
+#define BOOT_DEFERRED   3 /* set once the MUF interpreter is associated with a CT_MUF connection;
+                             bypass the usual loop around d->booted. */
+#define BOOT_SAFE       4 /* disconnect when the descriptor has no tasks or output queued */
+
 #define ENC_RAW         0
 #define ENC_ASCII       1
 #define ENC_LATIN1      2 /* not actually used yet */
@@ -139,10 +155,12 @@ struct mccp {
 struct telopt {
     unsigned char           *sb_buf;        /* hinoserm: Used by SD request/response system, init to NULL */
     size_t                   sb_buf_len;    /* hinoserm: Used by SD request/response system, init to 0 */
-    char                    *termtype;      /* hinoserm: Indicates the client's TERMINAL TYPE info, or NULL */
     signed char              mccp;          /* hinoserm: Indicates that client is able/willing to compress */
     unsigned short           width;         /* hinoserm: for NAWS */
     unsigned short           height;        /* hinoserm: for NAWS */
+    int                      termtypes_cnt;  /* davin: current position in termtype cycling */
+    stk_array               *termtypes;     /* davin: packed/list style array containing all seen termtypes */
+    long int                 mtts;          /* davin: MTTS bitvector. http://tintin.sourceforge.net/mtts/ */
 };
 
 
@@ -151,7 +169,7 @@ struct descriptor_data {
     int                      connected;     /* Connected as a player? */
     int                      did_connect;   /* Was connected to a player? */
     int                      con_number;    /* Connection number */
-    int                      booted;        /* 1 = Booted, 2 = Boot with message, 3 = WEB boot */
+    int                      booted;        /* refer to BOOT_ defines */
     int                      fails;         /* Number of fail connection attempts */
     int                      block;         /* Is this descriptor blocked of input? */
     dbref                   *prog;          /* Which programs are blocking the input? -- UNIMPLEMENTED */
@@ -208,26 +226,29 @@ struct descriptor_data {
     struct telopt            telopt;
 };
 
-#define DF_HTML          0x1 /* Connected to the internal WEB server. -- UNIMPLEMENTED */
-#define DF_PUEBLO        0x2 /* Allows for HTML/Pueblo extentions on a connected port. -- UNIMPLEMENTED */
-#define DF_MUF           0x4 /* Connected onto a MUF or MUF-Listening port. -- UNIMPLEMENTED */
-#define DF_IDLE          0x8 /* This is set if the descriptor is idle. */
-#define DF_TRUEIDLE     0x10 /* Set if the descriptor goes past the @tune idletime. Also triggers the propqueues if connected. */
-#define DF_INTERACTIVE  0x20 /* If the player is in the MUF editor or the READ prim is used, etc. */
-#define DF_COLOR        0x40 /* Used in conjunction with ansi_notify_descriptor */
+#define DF_HTML           0x1 /* Connected to the internal WEB server. -- UNIMPLEMENTED */
+#define DF_PUEBLO         0x2 /* Allows for HTML/Pueblo extentions on a connected port. -- UNIMPLEMENTED */
+#define DF_MUF            0x4 /* Connected onto a MUF or MUF-Listening port. -- UNIMPLEMENTED */
+#define DF_IDLE           0x8 /* This is set if the descriptor is idle. */
+#define DF_TRUEIDLE      0x10 /* Set if the descriptor goes past the @tune idletime. Also triggers the propqueues if connected. */
+#define DF_INTERACTIVE   0x20 /* If the player is in the MUF editor or the READ prim is used, etc. */
+#define DF_COLOR         0x40 /* Used in conjunction with ansi_notify_descriptor */
 #ifdef NEWHTTPD
-#define DF_HALFCLOSE    0x80 /* Used by the webserver to tell if a descr is halfclosed. hinoserm */
+#define DF_HALFCLOSE     0x80 /* Used by the webserver to tell if a descr is halfclosed. hinoserm */
 #endif /* NEWHTTPD */
 #ifdef USE_SSL
-#define DF_SSL         0x100 /* Indicates that this connection is SSL - Alynna */
+#define DF_SSL          0x100 /* Indicates that this connection is SSL - Alynna */
 #endif /* USE_SSL */
-#define DF_SUID        0x200 /* Set when this descriptor gets assigned a player */
-#define DF_WEBCLIENT   0x400 /* Reserved for Nuku's webclient */
-#define DF_COMPRESS    0x800 /* Indicates that this connection is MCCP-enabled -hinoserm */
-#define DF_MISC       0x8000 /* You can play with this */
-#define DF_IPV6      0x10000 /* Achievement Unlocked: Bleeding Edge - You are connected using IPv6! */
-#define DF_256COLOR  0x20000 /* This descriptor is accepting 256 color */
-#define DF_POLLING   0x80000 /* Makes HTMUF immune to HTTP server timeouts */
+#define DF_SUID         0x200 /* Set when this descriptor gets assigned a player */
+#define DF_WEBCLIENT    0x400 /* Reserved for Nuku's webclient */
+#define DF_COMPRESS     0x800 /* Indicates that this connection is MCCP-enabled -hinoserm */
+#define DF_MISC        0x8000 /* You can play with this */
+#define DF_IPV6       0x10000 /* Achievement Unlocked: Bleeding Edge - You are connected using IPv6! */
+#define DF_256COLOR   0x20000 /* This descriptor is accepting 256 color */
+#define DF_TELNET     0x80000 /* This descriptor is a telnet client and allows telopt command sequences. */
+#define DF_KEEPALIVE 0x100000 /*   CT_HTTP: Makes HTMUF immune to HTTP server timeouts.
+                                 Other CT_: Send TELOPT_IAC + TELOPT_NOP every tp_keepalive_interval.
+                                            Ignored if DF_TELNET is not also present. */
 
 #define DR_FLAGS(x,y)         ((descrdata_by_descr(x))->flags & y)
 #define DR_CON_FLAGS(x,y)     ((descrdata_by_index(x))->flags & y)
@@ -241,6 +262,9 @@ struct descriptor_data {
 #define DR_CON_REM_FLAGS(x,y) ((descrdata_by_index(x))->flags &= ~y)
 #define DR_RAW_REM_FLAGS(x,y) ((x)->flags &= ~y)
 
+
+/* Connection types. Not all of these allow telnet behavior. DF_TELNET has to
+ * be set after connection to enable telopt negotiation. */
 #define CT_MUCK		0
 #ifdef NEWHTTPD
 #define CT_HTTP         1 /* hinoserm */
@@ -272,6 +296,7 @@ extern unsigned int bytesIn;
 extern unsigned int bytesOut;
 extern unsigned int commandTotal;
 extern void shutdownsock(struct descriptor_data *d);
+extern void telopt_advertise(struct descriptor_data *d);
 extern struct descriptor_data * initializesock(int s, struct huinfo *hu, int ctyp, int cport, int welcome);
 extern struct descriptor_data* descrdata_by_index(int index);
 extern struct descriptor_data* descrdata_by_descr(int i);
