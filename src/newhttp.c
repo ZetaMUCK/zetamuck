@@ -312,7 +312,7 @@ http_sendheader(struct descriptor_data *d, int statcode,
                 const char *content_type, int content_length,
                 bool terminate_headers, bool close)
 {
-    struct http_field *f;
+    //struct http_field *f;
     //int iscompressed=0;
 
     char tbuf[BUFFER_LEN];
@@ -339,10 +339,9 @@ http_sendheader(struct descriptor_data *d, int statcode,
         queue_text(d, "Content-Type: text/plain\r\n");
 
 
-    f = http_fieldlookup(d, "Accept-Encoding");
-    
 #ifdef MCCP_ENABLED
-    /* if (f && f->data && equalstr("*gzip*", f->data)) {
+    /* f = http_fieldlookup(d, "Accept-Encoding");
+       if (f && f->data && equalstr("*gzip*", f->data)) {
         iscompressed = 1;
         queue_text(d, "Content-Encoding: gzip\r\n");
     } */

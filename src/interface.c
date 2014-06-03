@@ -3470,7 +3470,8 @@ queue_string(struct descriptor_data *d, const char *s)
 {
     int result, len = strlen(s);
     const char *sp;
-    char *filtered, *fp, *fend;
+    char *filtered, *fp;
+    // char *fend;
 #ifdef UTF8_SUPPORT
     const char *send = s + len - 1;
 #endif
@@ -3478,7 +3479,7 @@ queue_string(struct descriptor_data *d, const char *s)
     if (d->encoding == ENC_ASCII) {
         filtered = (char *) malloc(len + 1);
         fp = filtered;
-        fend = filtered + len;
+        //fend = filtered + len;
 
         for (sp = s; *sp != '\0'; sp++) {
             if (isascii(*sp)) {
@@ -3495,7 +3496,7 @@ queue_string(struct descriptor_data *d, const char *s)
         
         filtered = (char *) malloc( (len*3) + 1);
         fp = filtered;
-        fend = filtered + (len*3);
+        //fend = filtered + (len*3);
 
         for (sp = s; *sp != '\0'; sp++) {
             wclen = mbtowc(&wctmp, sp, send - sp + 1);
@@ -3715,8 +3716,6 @@ save_command(struct descriptor_data *d, const char *command, int len, int wclen)
 int
 process_telnet_IAC(struct descriptor_data *d, char *q, char *p)
 {
-    char buf[2];
-
     if (d->inIAC == TELOPT_IAC) {
         // Client sent us IAC; assume IAC+NOP is safe and enable keepalives.
         if (!DR_RAW_FLAGS(d, DF_KEEPALIVE)) {

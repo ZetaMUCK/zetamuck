@@ -111,9 +111,10 @@ find_registered_obj(dbref player, const char *name)
     const char *p;
     char buf[BUFFER_LEN];
     PropPtr ptr;
-    dbref tmp;
+#ifdef HIDDEN_REG
+    dbref tmp = player;
+#endif
 
-    tmp = player;
     if (*name != REGISTERED_TOKEN)
         return (NOTHING);
     for (p = name + 1; *p && isspace(*p); p++) ;

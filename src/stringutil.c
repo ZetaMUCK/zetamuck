@@ -622,13 +622,9 @@ mushformat_substitute(const char *str)
 {
     char c;
     //char d;
-    char prn[3];
     static char buf[BUFFER_LEN * 2];
     char orig[BUFFER_LEN];
     char *result;
-
-    prn[0] = '%';
-    prn[2] = '\0';
 
     strcpy(orig, str);
     str = orig;
@@ -637,7 +633,7 @@ mushformat_substitute(const char *str)
     while (*str) {
         if (*str == '%') {
             *result = '\0';
-            prn[1] = c = *(++str);
+            c = *(++str);
             if (!c) {
                 *(result++) = '%';
                 continue;
