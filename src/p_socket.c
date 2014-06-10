@@ -1724,7 +1724,7 @@ prim_set_sockopt(PRIM_PROTOTYPE)
     if (oper2->type != PROG_INTEGER)
         abort_interp("Expected integer. (2)");
     flag = oper2->data.number;
-    if (flag == 0) {            /* remove any queue options */
+    if (flag == SOCKOPT_NOQUEUE) {            /* remove any queue options */
         theSock->usequeue = 0;
         theSock->usesmartqueue = 0;
         theSock->rawmode = 0;
@@ -1734,20 +1734,20 @@ prim_set_sockopt(PRIM_PROTOTYPE)
             theSock->raw_input_at = NULL;
         }
         result = 1;
-    } else if (flag == 1) {
+    } else if (flag == SOCKOPT_SIMPLEQUEUE) {
         theSock->rawmode = 0;
         theSock->usequeue = 1;
         theSock->usesmartqueue = 0;
         result = 1;
-    } else if (flag == 2) {
+    } else if (flag == SOCKOPT_TELNETQUEUE) {
         theSock->rawmode = 0;
         theSock->usequeue = 1;
         theSock->usesmartqueue = 1;
         result = 1;
-    } else if (flag == 5) {
+    } else if (flag == SOCKOPT_HOMEINSTANCE) {
         update_socket_frame(theSock, fr);
         result = 1;
-    } else if (flag == 3) {
+    } else if (flag == SOCKOPT_RAWMODE) {
         theSock->rawmode = 1;
         theSock->usesmartqueue = 0;
         theSock->usequeue = 0;

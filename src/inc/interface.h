@@ -67,6 +67,12 @@
 #define ENC_LATIN1      2 /* not actually used yet */
 #define ENC_UTF8        3 /* must be highest, per our telopt processing */
 
+#define SOCKOPT_NOQUEUE      0
+#define SOCKOPT_SIMPLEQUEUE  1
+#define SOCKOPT_TELNETQUEUE  2
+#define SOCKOPT_RAWMODE      3
+#define SOCKOPT_HOMEINSTANCE 5
+
 #ifdef MCCP_ENABLED
 #define COMPRESS_BUF_SIZE 16384 /* This will use 16k for every descriptor that has MCCP enabled */
 #endif
