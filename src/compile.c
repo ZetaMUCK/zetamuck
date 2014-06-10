@@ -675,17 +675,17 @@ include_internal_defs(COMPSTATE *cstat)
 #endif
 
     /* for SOCK_SETOPT */
-    insert_def(cstat, "NOQUEUE", "0");
-    insert_def(cstat, "SIMPLEQUEUE", "1");
-    insert_def(cstat, "TELNETQUEUE", "2");
-    insert_def(cstat, "RAWMODE", "3");
-    insert_def(cstat, "HOMEINSTANCE", "5");
+    insert_def(cstat, "NOQUEUE", STRINGIFY(SOCKOPT_NOQUEUE));
+    insert_def(cstat, "SIMPLEQUEUE",  STRINGIFY(SOCKOPT_SIMPLEQUEUE));
+    insert_def(cstat, "TELNETQUEUE", STRINGIFY(SOCKOPT_TELNETQUEUE));
+    insert_def(cstat, "RAWMODE", STRINGIFY(SOCKOPT_RAWMODE));
+    insert_def(cstat, "HOMEINSTANCE", STRINGIFY(SOCKOPT_HOMEINSTANCE));
     /* For REG Expression support */
 #ifdef PCRE_SUPPORT
     insert_def(cstat, "reg_none", "0");
-    insert_def(cstat, "reg_icase", MUF_RE_ICASE_STR);
-    insert_def(cstat, "reg_all", MUF_RE_ALL_STR);
-    insert_def(cstat, "reg_extended", MUF_RE_EXTENDED_STR);
+    insert_def(cstat, "reg_icase", STRINGIFY(MUF_RE_ICASE));
+    insert_def(cstat, "reg_all", STRINGIFY(MUF_RE_ALL));
+    insert_def(cstat, "reg_extended", STRINGIFY(MUF_RE_EXTENDED));
 #endif
 
     /* Some math stuff */

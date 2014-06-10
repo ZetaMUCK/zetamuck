@@ -7,10 +7,6 @@
 #define MUF_RE_ALL        2
 #define MUF_RE_EXTENDED   4
 
-#define MUF_RE_ICASE_STR     "1"
-#define MUF_RE_ALL_STR       "2"
-#define MUF_RE_EXTENDED_STR  "4"
-
 /* The regmatch_* macros are convenience wrappers for simple text matching
  * scenarios that don't require capturing. regmatch_re_get returns a null
  * pointer if fed a null pattern, and regmatch_exec performs a strcmp against

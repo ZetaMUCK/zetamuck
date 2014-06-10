@@ -20,6 +20,9 @@
 # endif
 #endif
 
+#define STRINGIFY(s) _STRINGIFY(s)
+#define _STRINGIFY(s) #s
+
 #define SSL_CERT_FILE "data/server.pem"
 #define SSL_KEY_FILE "data/server.pem"
 
