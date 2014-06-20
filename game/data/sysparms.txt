@@ -262,9 +262,10 @@ mpi_max_commands
 Max # of instrs in uninterruptable MPI programs before the MPI will abort.
 ~~~
 pause_min
-The minimum time in milliseconds the server will pause in select() 
-between player input/output servicings. Larger numbers slow FOREGROUND 
-and BACKGROUND MUF programs, but reduce CPU usage.
+The time in milliseconds the server will block in select() if there is no
+socket I/O and the only pending game activity are timequeue events.
+Larger numbers slow FOREGROUND and BACKGROUND MUF programs when the game
+is inactive, and reduce CPU usage. 0 is strongly discouraged.
 ~~~
 free_frames_pool
 The number of program frames that are always available without having 
@@ -737,6 +738,26 @@ what MUSH users expect, while leaving it off will reduce the
 amount of accidental interference caused by the presence of a %
 character. (similar to what MUCK users are accustomed to with
 softcoded %r and %t support)
+~~~
+ascii_descrs
+Controls whether player connections should default to an ASCII
+encoding if the client does not otherwise negotiate a character
+set. TRUE is safest, but filters out any extended LATIN1 or
+UTF-8 that might have properly rendered on someone's screen
+(completely by accident).
+~~~
+delay_welcome
+If TRUE, delays player connections by one second in order to
+give telnet capabilities time to be negotiated. This allows
+DF_COLOR, DF_COLOR256, and DF_PUEBLO a chance to be enabled
+at the welcome screen without dedicating additional ports to
+the features. If negotiation does not succeed in time, the
+flags will still be set, but:
+
+- welcome.html will not be displayed (DF_PUEBLO)
+- welcome.txt will not be rendered with color codes, and
+  color will be disabled on login unless the character has
+  color preference flags set. (DF_COLOR, DF_COLOR256)
 ~~~
 web_allow_players
 If TRUE, setting will allow players to have a _/www prop on themselves, which

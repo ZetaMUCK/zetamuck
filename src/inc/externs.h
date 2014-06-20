@@ -69,6 +69,8 @@ extern void delta_dump_now(void);
 #endif
 extern time_t next_cron_time(void);
 extern void check_cron_time(void);
+extern time_t next_keepalive_time(void);
+extern time_t next_welcome_time(void);
 extern time_t next_archive_time(void);
 extern void check_archive_time(void);
 extern int auto_archive_now(void);

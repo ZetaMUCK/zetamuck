@@ -202,6 +202,47 @@ check_cron_time(void)
     }
 }
 
+static time_t last_keepalive_time = 0L;
+
+time_t
+next_keepalive_time()
+{
+    time_t currtime = time((time_t *) NULL);
+    time_t next_keepalive;
+
+    if (tp_keepalive_interval) {
+        if (!last_keepalive_time ||
+                (last_keepalive_time + tp_keepalive_interval) < currtime) {
+            last_keepalive_time = currtime;
+            do_keepalive = 1;
+            return (0L);
+        }
+        if (!(next_keepalive = last_keepalive_time + tp_keepalive_interval - currtime)) {
+            last_keepalive_time = currtime;
+            do_keepalive = 1;
+        }
+        return (next_keepalive);
+    }
+
+    return (-1L);
+}
+
+/* next_welcome is defined by interface.c */
+time_t
+next_welcome_time()
+{
+    time_t currtime = time((time_t *) NULL);
+
+    if (pending_welcomes) {
+        if (next_welcome < currtime) {
+            return (0L);
+        }
+        return (next_welcome - currtime); /* always 0-1, in theory */
+    }
+
+    return (-1L);
+}
+
 /**********************************************
  * Archive Interval for auto-archiving support. 
  **********************************************/
@@ -279,7 +320,9 @@ auto_archive_now(void)
 time_t
 mintime(time_t a, time_t b)
 {
-    return ((a > b) ? b : a);
+    // ignore negative values; fixes next_event_time bug. -davin
+    //return ((a > b) ? b : a);
+    return ((b > a) && (a > -1) ? a : b);
 }
 
 
@@ -288,11 +331,16 @@ next_muckevent_time(void)
 {
     time_t nexttime = 1000L;
 
-    nexttime = mintime(next_event_time(), nexttime);
     nexttime = mintime(next_dump_time(), nexttime);
     nexttime = mintime(next_clean_time(), nexttime);
     nexttime = mintime(next_cron_time(), nexttime);
     nexttime = mintime(next_archive_time(), nexttime);
+    nexttime = mintime(next_keepalive_time(), nexttime);
+    nexttime = mintime(next_welcome_time(), nexttime);
+    // It's safe to skip next_event_time() if nexttime is already 0.
+    if (!nexttime && !(nexttime = mintime(next_event_time(), nexttime))) {
+        event_needs_delay=1;
+    }
 
     return (nexttime);
 }

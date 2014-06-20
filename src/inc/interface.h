@@ -59,10 +59,12 @@
 #define TELOPT_AO       '\xF5'
 #define TELOPT_AYT      '\xF6'
 
-#define BOOT_DROP       1 /* the most common case, server choosing to disconnect client */
+#define BOOT_DROP       1 /* the most common case, server choosing to
+                             disconnect client */
 #define BOOT_QUIT       2 /* player QUIT command */
-#define BOOT_DEFERRED   3 /* set once the MUF interpreter is associated with a CT_MUF connection;
-                             bypass the usual loop around d->booted. */
+#define BOOT_DEFERRED   3 /* set once the MUF interpreter is associated with a
+                             CT_MUF connection; bypass the usual loop around
+                             d->booted. */
 #define BOOT_SAFE       4 /* disconnect when the descriptor has no tasks or output queued */
 
 #define ENC_RAW         0
@@ -235,29 +237,44 @@ struct descriptor_data {
     struct telopt            telopt;
 };
 
-#define DF_HTML           0x1 /* Connected to the internal WEB server. -- UNIMPLEMENTED */
-#define DF_PUEBLO         0x2 /* Allows for HTML/Pueblo extentions on a connected port. -- UNIMPLEMENTED */
-#define DF_MUF            0x4 /* Connected onto a MUF or MUF-Listening port. -- UNIMPLEMENTED */
+#define DF_HTML           0x1 /* Connected to the internal WEB server.
+                                 -- UNIMPLEMENTED */
+#define DF_PUEBLO         0x2 /* Allows for HTML/Pueblo extentions on a
+                                 connected port. -- UNIMPLEMENTED */
+#define DF_MUF            0x4 /* Connected onto a MUF or MUF-Listening port.
+                                 -- UNIMPLEMENTED */
 #define DF_IDLE           0x8 /* This is set if the descriptor is idle. */
-#define DF_TRUEIDLE      0x10 /* Set if the descriptor goes past the @tune idletime. Also triggers the propqueues if connected. */
-#define DF_INTERACTIVE   0x20 /* If the player is in the MUF editor or the READ prim is used, etc. */
-#define DF_COLOR         0x40 /* Used in conjunction with ansi_notify_descriptor */
+#define DF_TRUEIDLE      0x10 /* Set if the descriptor goes past the @tune
+                                 idletime. Also triggers the propqueues if
+                                 connected. */
+#define DF_INTERACTIVE   0x20 /* If the player is in the MUF editor or the
+                                 READ prim is used, etc. */
+#define DF_COLOR         0x40 /* Used in conjunction with
+                                 ansi_notify_descriptor */
 #ifdef NEWHTTPD
-#define DF_HALFCLOSE     0x80 /* Used by the webserver to tell if a descr is halfclosed. hinoserm */
+#define DF_HALFCLOSE     0x80 /* Used by the webserver to tell if a descr is
+                                 halfclosed. hinoserm */
 #endif /* NEWHTTPD */
 #ifdef USE_SSL
-#define DF_SSL          0x100 /* Indicates that this connection is SSL - Alynna */
+#define DF_SSL          0x100 /* Indicates that this connection is SSL
+                                 - Alynna */
 #endif /* USE_SSL */
-#define DF_SUID         0x200 /* Set when this descriptor gets assigned a player */
+#define DF_SUID         0x200 /* Set when this descriptor gets assigned a
+                                 player */
 #define DF_WEBCLIENT    0x400 /* Reserved for Nuku's webclient */
-#define DF_COMPRESS     0x800 /* Indicates that this connection is MCCP-enabled -hinoserm */
+#define DF_COMPRESS     0x800 /* Indicates that this connection is
+                                 MCCP-enabled -hinoserm */
 #define DF_MISC        0x8000 /* You can play with this */
-#define DF_IPV6       0x10000 /* Achievement Unlocked: Bleeding Edge - You are connected using IPv6! */
+#define DF_IPV6       0x10000 /* Client is connected using IPv6. */
 #define DF_256COLOR   0x20000 /* This descriptor is accepting 256 color */
-#define DF_TELNET     0x80000 /* This descriptor is a telnet client and allows telopt command sequences. */
-#define DF_KEEPALIVE 0x100000 /*   CT_HTTP: Makes HTMUF immune to HTTP server timeouts.
-                                 Other CT_: Send TELOPT_IAC + TELOPT_NOP every tp_keepalive_interval.
-                                            Ignored if DF_TELNET is not also present. */
+#define DF_TELNET     0x80000 /* This descriptor is a telnet client and allows
+                                 telopt IAC sequences. */
+#define DF_KEEPALIVE 0x100000 /* Set by the server to make CT_HTTP connections
+                                 immune to timeouts. Also set on DF_TELNET
+                                 connections to enable IAC+NOP polling every
+                                 tp_keepalive_interval. */
+#define DF_WELCOMING 0x200000 /* Used for delayed welcome screens that support
+                                 color or Pueblo without a separate port */
 
 #define DR_FLAGS(x,y)         ((descrdata_by_descr(x))->flags & y)
 #define DR_CON_FLAGS(x,y)     ((descrdata_by_index(x))->flags & y)
@@ -343,6 +360,10 @@ extern int restart_flag; /* if non-zero, should restart after shut down */
 /* if delayed_shutdown is non-null, game is in a delayed shutdown loop.
  * interface should shut down when when tp_shutdown_delay has been exceeded. */
 extern time_t delayed_shutdown;
+extern int pending_welcomes; /* if zero, bypass next_welcome_time */
+extern time_t next_welcome;  /* used by next_welcome_time */
+extern int do_keepalive; /* if non-zero, should send IAC+NOP to DF_TELNET */
+extern int event_needs_delay; /* if non-zero, add tp_pause_min to select timeout */
 extern void emergency_shutdown(void);
 extern int boot_off(dbref player);
 extern void boot_player_off(dbref player);

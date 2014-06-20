@@ -52,6 +52,7 @@ extern time_t tp_idletime;
 extern time_t tp_connidle;
 extern time_t tp_maxidle;
 extern time_t tp_cron_interval;
+extern time_t tp_keepalive_interval;
 extern time_t tp_archive_interval;
 extern time_t tp_shutdown_delay;
 
@@ -76,7 +77,6 @@ extern int tp_start_pennies;
 extern int tp_command_burst_size;
 extern int tp_commands_per_time;
 extern int tp_command_time_msec;
-extern int tp_keepalive_interval;
 
 extern int tp_max_delta_objs;
 extern int tp_max_loaded_objs;
@@ -183,6 +183,7 @@ extern int tp_use_self_on_command;
 extern int tp_quiet_moves;
 extern int tp_quiet_connects;
 extern int tp_proplist_int_counter;
+
 #ifdef MCP_SUPPORT
 extern int tp_enable_mcp;
 #endif
@@ -207,6 +208,7 @@ extern int tp_spaces_in_playernames;
 extern int tp_mush_format_escapes;
 extern int tp_strict_mush_escapes;
 extern int tp_ascii_descrs;
+extern int tp_delay_welcome;
 extern int tp_muf_profiling;
 extern int tp_player_aliasing;
 

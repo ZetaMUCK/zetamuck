@@ -3914,6 +3914,16 @@ restarting the game. (see previous page)
     If the port type is a MUF Port, then when a connection is made to the
     MUCK, this program will be run instead of the normal in-server connection
     routines.
+@ports/<port#>/telopts:<integer prop representing true or false>
+    If the port type is a MUF Port, incoming connections will be treated as
+    telnet clients and will be capable of negotiating telnet features. You
+    will want to enable this if your program emulates a game login screen.
+    This happens automatically with "type" settings of 0, 2, and 4. The
+    default is 0; the game will treat the connection as a raw byte stream,
+    and not do anything special when the IAC character is seen. This is
+    equivalent to manually setting the DF_TELNET flag on the connection with
+    the DESCR_SET prim, but the process is automatic and more likely to
+    negotiate color support before you begin rendering text.
 
 See MUF PORTS
 ~~~~

@@ -42,6 +42,13 @@ int total_loggedin_connects = 0;
 
 time_t delayed_shutdown = 0;
 
+int pending_welcomes = 0;
+time_t next_welcome = 0;
+
+int event_needs_delay = 0;
+
+int do_keepalive = 0;
+
 #ifdef MODULAR_SUPPORT
 struct module *modules = NULL;
 #endif
@@ -1814,7 +1821,7 @@ shovechars(void)
     fd_set input_set, output_set;
     time_t now, tmptq;
     struct timeval last_slice, current_time;
-    struct timeval next_slice, next_keepalive;
+    struct timeval next_slice;
     struct timeval timeout, slice_timeout;
     int cnt;
     struct descriptor_data *d, *dnext;
@@ -1824,7 +1831,6 @@ shovechars(void)
     int openfiles_max;
     int i;
     char buf[2048], buf2[256];
-    int do_keepalive = 0;
 #ifdef USE_SSL
     int ssl_status_ok = 1;
 #endif
@@ -1926,21 +1932,11 @@ shovechars(void)
 # endif
 #endif /* EXPERIMENTAL_THREADING */
 
-    next_keepalive = last_slice;
 
     while (shutdown_flag == 0) { /* Game Loop */
         gettimeofday(&current_time, (struct timezone *) 0);
 
         last_slice = update_quotas(last_slice, current_time);
-
-        // Keepalives are not implemented in event.c as they are a time
-        // sensitive operation. Instead, they override slice timeouts.
-        if (tp_keepalive_interval && 
-            (msec_diff(current_time, next_keepalive) >= 0)) {
-                do_keepalive++; // 
-                next_keepalive = msec_add(current_time,
-                                           tp_keepalive_interval * 60000);
-        }
 
         next_muckevent();       /* Process things in event.c */
         process_commands();     /* Process player commands in game.c */
@@ -1961,16 +1957,7 @@ shovechars(void)
         timeout.tv_usec = 0;
 
         next_slice = msec_add(last_slice, tp_command_time_msec);
-
-        if (msec_diff(next_slice, next_keepalive) <= 0) {
-            // Next slice is due before next keepalive. The tp_command_time_msec
-            // tune defaults to one 1000ms, so this is the most common case.
-            slice_timeout = timeval_sub(next_slice, current_time);
-        } else {
-            // Next keepalive will arrive sooner. This will be rare as the
-            // minimum tp_keepalive_interval is 1. (60000ms)
-            slice_timeout = timeval_sub(next_keepalive, current_time);
-        }
+        slice_timeout = timeval_sub(next_slice, current_time);
 
         FD_ZERO(&output_set);
         FD_ZERO(&input_set);
@@ -1978,6 +1965,20 @@ shovechars(void)
 
         for (d = descriptor_list; d; d = dnext) {
             dnext = d->next;
+
+            if (!d->booted && DR_RAW_FLAGS(d, DF_WELCOMING)) {
+                /* This is where we render the welcome screen for DF_TELNET
+                 * connections if tp_delayed_welcomes is enabled.
+                 * We use this approach to give telopt negotiation an
+                 * opportunity to negotiate capabilities and
+                 * enable DF_COLOR, DF_COLOR256, and DF_PUEBLO. */
+                if (current_systime >= d->connected_at + 1) {
+                    DR_RAW_REM_FLAGS(d, DF_WELCOMING);
+                    announce_login(d);
+                    welcome_user(d);
+                    pending_welcomes--;
+                }
+            }
 #if defined(DESCRFILE_SUPPORT) || defined(NEWHTTPD)
             if (d->dfile)
                 descr_sendfileblock(d);
@@ -2056,7 +2057,6 @@ shovechars(void)
                 buf[0] = TELOPT_IAC;
                 buf[1] = TELOPT_NOP;
                 queue_write(d, buf, 2);
-                do_keepalive--;
             }
 
             if (d->input.lines > 100)
@@ -2084,6 +2084,8 @@ shovechars(void)
             }
 #endif
         }                       /* for (d) */
+
+        do_keepalive = 0;
 
         if (ndescriptors < avail_descriptors) /* prepare read pool */
             for (i = 0; i < numsocks; i++)
@@ -2132,9 +2134,11 @@ shovechars(void)
 
         tmptq = next_muckevent_time();
         if ((tmptq >= 0L) && (timeout.tv_sec > tmptq)) {
-            timeout.tv_sec = (long)tmptq + (tp_pause_min / 1000);
-            timeout.tv_usec = (tp_pause_min % 1000) * 1000L;
+            timeout.tv_sec = (long)tmptq + (event_needs_delay ? (tp_pause_min / 1000) : 0);
+            timeout.tv_usec = (event_needs_delay ? (tp_pause_min % 1000) * 1000L : 0);
         }
+        event_needs_delay = 0;
+
         gettimeofday(&sel_in, NULL);
         if (select(maxd, &input_set, &output_set, (fd_set *) 0, &timeout) < 0) {
             if (errnosocket != EINTR) { /* select() returned crit error */
@@ -3193,6 +3197,8 @@ struct descriptor_data *
 initializesock(int s, struct huinfo *hu, int ctype, int cport, int welcome)
 {
     struct descriptor_data *d;
+    char buf[BUFFER_LEN];
+    short is_telnet = 0;
 
     ndescriptors++;
     MALLOC(d, struct descriptor_data, 1);
@@ -3254,6 +3260,7 @@ initializesock(int s, struct huinfo *hu, int ctype, int cport, int welcome)
 #if defined(DESCRFILE_SUPPORT) || defined(NEWHTTPD)
     d->dfile = NULL;
 #endif /* DESCRFILE_SUPPORT */
+    d->encoding = ENC_RAW;
 
     if (descriptor_list)
         descriptor_list->prev = &d->next;
@@ -3267,19 +3274,21 @@ initializesock(int s, struct huinfo *hu, int ctype, int cport, int welcome)
 #ifdef USE_SSL
          ctype == CT_SSL ||
 #endif
-         ctype == CT_PUEBLO)
-            && tp_ascii_descrs) {
-        d->encoding = ENC_ASCII;
-        DR_RAW_ADD_FLAGS(d, DF_TELNET); // process telnet options
-    } else {
-        // Assume a RAW encoding for new CT_MUF connections, in order to
-        // maintain backward compatibility with MUF programs speaking binary.
-        // Connection screen emulators should call the DESCR_TELNET prim, which
-        // will switch the encoding over to ASCII and initiate telopt
-        // negotiation.
-        d->encoding = ENC_RAW;
+         ctype == CT_PUEBLO)) {
+        is_telnet = 1;
+    } else if (ctype == CT_MUF) {
+        sprintf(buf, "@Ports/%d/Telopts", cport);
+        get_property((dbref) 0, buf);
+        is_telnet = get_property_value((dbref) 0, buf);
     }
-    /* UTF-8 is a channel upgrade - never a default */
+
+    if (is_telnet) {
+        if (tp_ascii_descrs) {
+            d->encoding = ENC_ASCII;
+        } 
+        DR_RAW_ADD_FLAGS(d, DF_TELNET);
+        telopt_advertise(d);
+    }
 
 #ifdef NEWHTTPD
     if (ctype == CT_HTTP) {
@@ -3293,11 +3302,15 @@ initializesock(int s, struct huinfo *hu, int ctype, int cport, int welcome)
         && ctype != CT_HTTP
 #endif /* NEWHTTPD */
         ) {
-        if (DR_RAW_FLAGS(d, DF_TELNET)) {
-            telopt_advertise(d);
-        }        
-        announce_login(d); 
-        welcome_user(d);
+        if (tp_delay_welcome && is_telnet) {
+            // delay the welcome, handle it in shovechars
+            DR_RAW_ADD_FLAGS(d, DF_WELCOMING);
+            next_welcome = current_systime + 1;
+            pending_welcomes++;
+        } else {
+            announce_login(d); 
+            welcome_user(d);
+        }
     }
     return d;
 }
@@ -3912,6 +3925,11 @@ process_telnet_IAC(struct descriptor_data *d, char *q, char *p)
                                     temp2.data.number = 0;
                                     array_setitem(&d->telopt.termtypes, &temp2, &temp1);
                                     CLEAR(&temp1);
+
+                                    if (!string_compare(termtype, "Pueblo")) {
+                                        /* Functionality test, DF_PUEBLO doesn't actually do anything yet */
+                                        DR_RAW_ADD_FLAGS(d, DF_PUEBLO);
+                                    }
                                 } else if (d->telopt.termtypes_cnt > 1)  {
                                     if (!*termtype) {
                                         temp1.type = PROG_STRING;
@@ -5130,7 +5148,7 @@ do_dinfo(dbref player, const char *arg)
             ctype = "unknown";
     }
 
-    anotify_fmt(player, "%s" SYSAQUA " descr " SYSYELLOW "%d" SYSBLUE " (%s)",
+    anotify_fmt(player, "%s"SYSAQUA " descr " SYSYELLOW "%d" SYSBLUE " (%s)",
                 d->connected ? ansi_unparse_object(player, d->player) : SYSGREEN
                 "[Connecting]", d->descriptor, ctype);
 
@@ -5139,12 +5157,17 @@ do_dinfo(dbref player, const char *arg)
         anotify_nolisten(player, descr_flag_description(d->descriptor), 1);
 
 	anotify_fmt(player, SYSAQUA "Termtype: "
-                        SYSCYAN "%s    "
-                        SYSAQUA "Encoding: "
-                        SYSCYAN "%s    "
-                        SYSAQUA "MTTS: " 
-                        SYSCYAN "%d",
+                        SYSCYAN "%-20s"
+                        SYSAQUA "Window: "
+                        SYSCYAN "%dx%d",
 	    d->telopt.termtypes->data.packed[0].data.string->data,
+        d->telopt.width, d->telopt.height);
+
+    anotify_fmt(player,
+                        SYSAQUA "Encoding: "
+                        SYSCYAN "%-20s"
+                        SYSAQUA "  MTTS: " 
+                        SYSCYAN "%d",
 	    (d->encoding == ENC_RAW ? "RAW" :
             (d->encoding == ENC_ASCII ? "US-ASCII" :
                  (d->encoding == ENC_UTF8 ? "UTF-8" : SYSRED "UNKNOWN"))),
@@ -6593,8 +6616,8 @@ pset_user2(int c, dbref who)
         result = plogin_user(d, who);
     d->booted = 0;
     if (d->type == CT_MUF) {
-        // Check to see if the DESCR_TELNET prim was already called. If not,
-        // initialize the telnet stuff now.
+        // Check to see if DF_TELNET was applied to the connection already. 
+        // If not, initialize the telnet stuff now.
         if (!DR_RAW_FLAGS(d, DF_TELNET)) {
             DR_RAW_ADD_FLAGS(d, DF_TELNET);
             if (tp_ascii_descrs)

@@ -104,7 +104,7 @@
 #define COMMAND_BURST_SIZE 500  /* commands allowed per user in a burst  */
 #define COMMANDS_PER_TIME 20    /* commands per time slice after burst   */
 #define COMMAND_TIME_MSEC 1000  /* time slice length in milliseconds     */
-#define KEEPALIVE_INTERVAL 1    /* minutes between TELNET NOP keepalives */
+#define KEEPALIVE_INTERVAL 60   /* seconds between TELNET NOP keepalives */
 
 /* Max %of db in unchanged objects allowed to be loaded.  Generally 5% */
 /* This is only needed if you defined DISKBASED in config.h */

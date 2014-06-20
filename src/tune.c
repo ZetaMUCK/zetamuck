@@ -103,6 +103,7 @@ time_t tp_connidle = CONNIDLE;
 time_t tp_maxidle = MAXIDLE;
 time_t tp_idletime = IDLETIME;
 time_t tp_cron_interval = CRON_INTERVAL;
+time_t tp_keepalive_interval = KEEPALIVE_INTERVAL;
 time_t tp_archive_interval = ARCHIVE_INTERVAL;
 time_t tp_shutdown_delay = SHUTDOWN_DELAY;
 
@@ -123,6 +124,7 @@ struct tune_time_entry tune_time_list[] = {
     {"Idletime", "connidle", &tp_connidle, LARCH, LMUF},
     {"Idletime", "maxidle", &tp_maxidle, LARCH, LMUF},
     {"Idletime", "idletime", &tp_idletime, LARCH, LMUF},
+    {"System", "keepalive_interval", &tp_keepalive_interval, LARCH, LMUF},
     {"MUF", "cron_interval", &tp_cron_interval, LARCH, LMUF},
     {"Database", "archive_interval", &tp_archive_interval, LARCH, LMUF},
     {"System", "shutdown_delay", &tp_shutdown_delay, LARCH, LMUF},
@@ -145,7 +147,6 @@ int tp_start_pennies = START_PENNIES;
 int tp_command_burst_size = COMMAND_BURST_SIZE;
 int tp_commands_per_time = COMMANDS_PER_TIME;
 int tp_command_time_msec = COMMAND_TIME_MSEC;
-int tp_keepalive_interval = KEEPALIVE_INTERVAL;
 int tp_max_delta_objs = MAX_DELTA_OBJS;
 int tp_max_loaded_objs = MAX_LOADED_OBJS;
 int tp_max_process_limit = MAX_PROCESS_LIMIT;
@@ -210,7 +211,6 @@ struct tune_val_entry tune_val_list[] = {
     {"System", "command_burst_size", &tp_command_burst_size, LARCH, LMUF},
     {"System", "commands_per_time", &tp_commands_per_time, LARCH, LMUF},
     {"System", "command_time_msec", &tp_command_time_msec, LARCH, LMUF},
-    {"System", "keepalive_interval", &tp_keepalive_interval, LARCH, LMUF},
     {"Database", "max_delta_objs", &tp_max_delta_objs, LARCH, LMUF},
     {"Database", "max_loaded_objs", &tp_max_loaded_objs, LARCH, LMUF},
     {"Database", "wizhidden_access_bit", &tp_wizhidden_access_bit, WBOY, LMAGE},
@@ -365,6 +365,7 @@ int tp_spaces_in_playernames = 0;
 int tp_mush_format_escapes = 0;
 int tp_strict_mush_escapes = 0;
 int tp_ascii_descrs = 0;
+int tp_delay_welcome = 1;
 int tp_muf_profiling       = 0;
 int tp_player_aliasing = 1;
 
@@ -469,6 +470,7 @@ struct tune_bool_entry tune_bool_list[] = {
     {"System", "mush_format_escapes", &tp_mush_format_escapes, LBOY, LMUF},
     {"System", "strict_mush_escapes", &tp_strict_mush_escapes, LBOY, LMUF},
     {"System", "ascii_descrs", &tp_ascii_descrs, LBOY, LMUF},
+    {"System", "delay_welcome", &tp_delay_welcome, LBOY, LMUF},
     {"Commands", "player_aliasing", &tp_player_aliasing, LARCH, LMUF},
 /*    {"MPI", "require_has_mpi_arg", &tp_require_has_mpi_arg, LARCH, LMUF}, */
 #ifdef NEWHTTPD
