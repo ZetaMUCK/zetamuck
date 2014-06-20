@@ -230,6 +230,27 @@ Puppets
 
 Type 'help <topic>' to get more help on a topic.
 ~~~
+KEEPALIVE|KEEPALIVES|KEEP ALIVE|KEEP ALIVES
+
+There is no flag for enabling keepalive functionality; if your telnet
+client is smart enough to handle the feature, they are enabled by
+default with no intervention required. Administrators can control the
+game's keepalive polling cycle with the "keepalive_interval" @tune,
+which defaults to 60 seconds.
+
+There is currently no way for players to disable keepalive behavior,
+and it is believed that the implementation is safe enough to not require
+a toggle. If you are aware of any use-cases to the contrary, please send
+an e-mail to davin@wordpainter.net for consideration.
+
+
+(Technical details: Keepalives are enabled when the first "IAC" byte is
+ seen by the client. We assume this means it's safe to send IAC+NOP
+ pairs, and the DF_KEEPALIVE descriptor flag is set to track this.)
+
+
+See: DESCRIPTOR FLAGS
+~~~
 DESCRIPTOR FLAGS|INDEX7|INDEX &
 
 Descriptor Flags
@@ -251,9 +272,19 @@ DF_COLOR       (Allows ANSI to be sent to unloggedin descriptor)
 DF_256COLOR    (Set automatically on players that have 256COLOR flag)
 DF_SSL         (Set if connection is SSL-encrypted)
 DF_COMPRESS    (Set if MCCP is currently in use)
-
-As time goes by, descriptor flags will begin to play a more important
-role, though for now they are for specific purposes. 
+DF_TELNET      (Set on connections where it is safe to negotiate telnet
+                options. The telnet "IAC" byte is not given special
+                treatment unless this flag is set. This flag must
+                manually be set on MUF sockets if you want to support
+                things like 256 color at the connection screen.)
+DF_KEEPALIVE   (Set when the game believes it should try to keep a
+                connection from timing out. On DF_TELNET connections,
+                it is set when the client sends its first "IAC" byte.
+                On CT_HTTP connections, it is set after the game
+                receives headers from the client and removed when
+                a response has been sent.)
+                
+See: KEEPALIVE
 ~                               Basic Commands
 ~
 @lock

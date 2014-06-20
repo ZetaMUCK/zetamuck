@@ -766,3 +766,26 @@ for directories with no index.html (or similar) file.
 web_allow_mpi
 If TRUE, setting will allow MPI to be executed by the webserver and displayed
 on pages.
+~~~
+ascii_descrs
+If TRUE, all telnet based connections to the game will have an initial
+descriptor encoding of ASCII unless the remote client negotiates otherwise.
+The ASCII encoding "scrubs" all bytes that are considered bogus for 7-bit ASCII,
+including "extended ASCII" (most commonly associated with the Latin1 codepage).
+
+This is the only safe default for new connections that will not result in
+terminal garbage being written to a user against their wishes. If this is false,
+a "RAW" encoding is used that filters nothing. (the old behavior)
+~~~
+keepalive_interval
+This is the interval in minutes between sending telnet keepalive packets
+(TELNET IAC + TELNET NOP) to all connected terminals. These packets are
+typically invisible to connected users without client debugging enabled, but
+should keep connections open without the need for a clientside deidler. It may
+also help with particularly aggressive firewalls on the client side that shut
+down connections with no incoming activity.
+
+Players should be able to disable this feature by setting the NOKEEPALIVE(?)
+flag. This is currently not implemented.
+
+If this is set to zero, keepalives are disabled game-wide.
