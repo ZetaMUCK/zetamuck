@@ -261,10 +261,12 @@ struct descriptor_data {
 #endif /* USE_SSL */
 #define DF_SUID         0x200 /* Set when this descriptor gets assigned a
                                  player */
-#define DF_WEBCLIENT    0x400 /* Reserved for Nuku's webclient */
 #define DF_COMPRESS     0x800 /* Indicates that this connection is
                                  MCCP-enabled -hinoserm */
-#define DF_MISC        0x8000 /* You can play with this */
+#define DF_MXP         0x1000 /* Client supports MUD eXtension Protocol
+                                 -- UNIMPLEMENTED */
+#define DF_MSP         0x2000 /* Client supports MUD Sount Protocol
+                                 -- UNIMPLEMENTED */
 #define DF_IPV6       0x10000 /* Client is connected using IPv6. */
 #define DF_256COLOR   0x20000 /* This descriptor is accepting 256 color */
 #define DF_TELNET     0x80000 /* This descriptor is a telnet client and allows
@@ -275,6 +277,13 @@ struct descriptor_data {
                                  tp_keepalive_interval. */
 #define DF_WELCOMING 0x200000 /* Used for delayed welcome screens that support
                                  color or Pueblo without a separate port */
+
+/* User defined flags. Use these for playing with descriptor flags or
+ * implementing your own features (such as webclients).
+ * Replaces DF_WEBLCIENT and DF_MISC. */
+#define DF_USER1     0x10000000
+#define DF_USER2     0x20000000
+#define DF_USER3     0x40000000
 
 #define DR_FLAGS(x,y)         ((descrdata_by_descr(x))->flags & y)
 #define DR_CON_FLAGS(x,y)     ((descrdata_by_index(x))->flags & y)

@@ -35,34 +35,44 @@ check_descr_flag(char *dflag)
         return DF_IDLE;
     if (string_prefix("df_trueidle", dflag))
         return DF_TRUEIDLE;
-    if (string_prefix("df_color", dflag))
-        return DF_COLOR;
-    if (string_prefix("df_256color", dflag))
-        return DF_256COLOR;
     if (string_prefix("df_interactive", dflag))
         return DF_INTERACTIVE;
+    if (string_prefix("df_color", dflag))
+        return DF_COLOR;
+    if (string_prefix("df_halfclose", dflag))
+        return DF_HALFCLOSE;
 #ifdef USE_SSL
     if (string_prefix("df_ssl", dflag))
         return DF_SSL;
 #endif /* USE_SSL */
-#ifdef IPV6
-    if (string_prefix("df_ipv6", dflag))
-        return DF_IPV6;
-#endif /* USE_SSL */
     if (string_prefix("df_suid", dflag))
         return DF_SUID;
-    if (string_prefix("df_webclient", dflag))
-        return DF_WEBCLIENT;
-    if (string_prefix("df_misc", dflag))
-        return DF_MISC;
-    if (string_prefix("df_keepalive", dflag))
-        return DF_KEEPALIVE;
-    if (string_prefix("df_telnet", dflag))
-        return DF_TELNET;
 #ifdef MCCP_ENABLED
     if (string_prefix("df_compress", dflag))
         return DF_COMPRESS;
 #endif /* MCCP_ENABLED */
+    if (string_prefix("df_mxp", dflag))
+        return DF_MXP;
+    if (string_prefix("df_msp", dflag))
+        return DF_MSP;
+#ifdef IPV6
+    if (string_prefix("df_ipv6", dflag))
+        return DF_IPV6;
+#endif /* USE_SSL */
+    if (string_prefix("df_256color", dflag))
+        return DF_256COLOR;
+    if (string_prefix("df_telnet", dflag))
+        return DF_TELNET;
+    if (string_prefix("df_keepalive", dflag))
+        return DF_KEEPALIVE;
+    if (string_prefix("df_welcoming", dflag))
+        return DF_WELCOMING;
+    if (string_prefix("df_user1", dflag))
+        return DF_USER1;
+    if (string_prefix("df_user2", dflag))
+        return DF_USER2;
+    if (string_prefix("df_user3", dflag))
+        return DF_USER3;
     return 0;
 }
 
@@ -77,12 +87,16 @@ descr_flag_set_perms(int dflag, int mlev, dbref prog)
     /* Standard non-settables */
     if (dflag == DF_HTML || dflag == DF_PUEBLO || dflag == DF_MUF
         || dflag == DF_TRUEIDLE || dflag == DF_INTERACTIVE || dflag == DF_SUID
+        || dflag == DF_WELCOMING || dflag == DF_HALFCLOSE
 #ifdef USE_SSL
         || dflag == DF_SSL
 #endif /* USE_SSL */
 #ifdef MCCP_ENABLED
         || dflag == DF_COMPRESS 
 #endif /* MCCP_ENABLED */
+#ifdef IPV6
+        || dflag == DF_IPV6
+#endif /* IPV6 */
         )
         return 0;
 

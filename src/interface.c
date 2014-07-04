@@ -5054,10 +5054,6 @@ descr_flag_description(int descr)
     struct descriptor_data *d = descrdata_by_descr(descr);
 
     strcpy(dbuf, SYSGREEN "Descr Flags:" SYSYELLOW);
-#ifdef IPV6
-    if (DR_RAW_FLAGS(d, DF_IPV6))
-        strcat(dbuf, " DF_IPV6");
-#endif /* IPV6 */
 #ifdef NEWHTTPD
     if (DR_RAW_FLAGS(d, DF_HTML))
         strcat(dbuf, " DF_HTML");
@@ -5066,10 +5062,6 @@ descr_flag_description(int descr)
         strcat(dbuf, " DF_PUEBLO");
     if (DR_RAW_FLAGS(d, DF_MUF))
         strcat(dbuf, " DF_MUF");
-    if (DR_RAW_FLAGS(d, DF_TELNET))
-        strcat(dbuf, " DF_TELNET");
-    if (DR_RAW_FLAGS(d, DF_KEEPALIVE))
-        strcat(dbuf, " DF_KEEPALIVE");
     if (DR_RAW_FLAGS(d, DF_IDLE))
         strcat(dbuf, " DF_IDLE");
     if (DR_RAW_FLAGS(d, DF_TRUEIDLE))
@@ -5078,22 +5070,40 @@ descr_flag_description(int descr)
         strcat(dbuf, " DF_INTERACTIVE");
     if (DR_RAW_FLAGS(d, DF_COLOR))
         strcat(dbuf, " DF_COLOR");
-    if (DR_RAW_FLAGS(d, DF_256COLOR))
-        strcat(dbuf, " DF_256COLOR");
+    if (DR_RAW_FLAGS(d, DF_HALFCLOSE))
+        strcat(dbuf, " DF_HALFCLOSE");
 #ifdef USE_SSL
     if (DR_RAW_FLAGS(d, DF_SSL))
         strcat(dbuf, " DF_SSL");
 #endif /* USE_SSL */
     if (DR_RAW_FLAGS(d, DF_SUID))
         strcat(dbuf, " DF_SUID");
-    if (DR_RAW_FLAGS(d, DF_WEBCLIENT))
-        strcat(dbuf, " DF_WEBCLIENT");
-    if (DR_RAW_FLAGS(d, DF_MISC))
-        strcat(dbuf, " DF_MISC");
 #ifdef MCCP_ENABLED
     if (DR_RAW_FLAGS(d, DF_COMPRESS))
         strcat(dbuf, " DF_COMPRESS");
 #endif /* MCCP_ENABLED */
+    if (DR_RAW_FLAGS(d, DF_MXP))
+        strcat(dbuf, " DF_MXP");
+    if (DR_RAW_FLAGS(d, DF_MSP))
+        strcat(dbuf, " DF_MSP");
+#ifdef IPV6
+    if (DR_RAW_FLAGS(d, DF_IPV6))
+        strcat(dbuf, " DF_IPV6");
+#endif /* IPV6 */
+    if (DR_RAW_FLAGS(d, DF_256COLOR))
+        strcat(dbuf, " DF_256COLOR");
+    if (DR_RAW_FLAGS(d, DF_TELNET))
+        strcat(dbuf, " DF_TELNET");
+    if (DR_RAW_FLAGS(d, DF_KEEPALIVE))
+        strcat(dbuf, " DF_KEEPALIVE");
+    if (DR_RAW_FLAGS(d, DF_WELCOMING))
+        strcat(dbuf, " DF_WELCOMING");
+    if (DR_RAW_FLAGS(d, DF_USER1))
+        strcat(dbuf, " DF_USER1");
+    if (DR_RAW_FLAGS(d, DF_USER2))
+        strcat(dbuf, " DF_USER2");
+    if (DR_RAW_FLAGS(d, DF_USER3))
+        strcat(dbuf, " DF_USER3");
     return dbuf;
 }
 
