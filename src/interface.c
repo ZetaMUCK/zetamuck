@@ -7425,8 +7425,8 @@ mssp_send(struct descriptor_data *d)
     int sent_name = 0;
     int sent_players = 0;
     int sent_uptime = 0;
-    int sent_ansi = 0;
-    int sent_mccp = 0;
+    int sent_hostname = 0;
+    int sent_port = 0;
     int sent_codebase = 0;
     int sent_family = 0;
 
@@ -7468,10 +7468,10 @@ mssp_send(struct descriptor_data *d)
                 sent_players = 1;
             else if (!strcmp("UPTIME", mssp_var))
                 sent_uptime = 1;
-            else if (!strcmp("ANSI", mssp_var))
-                sent_ansi = 1;
-            else if (!strcmp("MCCP", mssp_var))
-                sent_mccp = 1;
+            else if (!strcmp("HOSTNAME", mssp_var))
+                sent_hostname = 1;
+            else if (!strcmp("PORT", mssp_var))
+                sent_port = 1;
             else if (!strcmp("CODEBASE", mssp_var))
                 sent_codebase = 1;
             else if (!strcmp("FAMILY", mssp_var))
@@ -7497,30 +7497,68 @@ mssp_send(struct descriptor_data *d)
         queue_write(d, buf, strlen(buf));
     }
 
-    if (!sent_ansi) {
-        sprintf(buf, "\x01%s\x02%d", "ANSI", 1);
+    // Sending localhost (the default) is pointless.
+    if (!sent_hostname && strcmp("localhost", tp_servername)) {
+        sprintf(buf, "\x01%s\x02%s", "HOSTNAME", tp_servername);
+        queue_write(d, buf, strlen(buf));
+    }
+
+    if (!sent_port) {
+        sprintf(buf, "\x01%s\x02%d", "PORT", tp_textport);
         queue_write(d, buf, strlen(buf));
     }
 
     if (!sent_codebase) {
-        sprintf(buf, "\x01%s\x02%s", "CODEBASE", "ProtoMUCK");
+        sprintf(buf, "\x01%s\x02%s", "CODEBASE", "ZetaMUCK");
         queue_write(d, buf, strlen(buf));
     }
 
     if (!sent_family) {
-        sprintf(buf, "\x01%s\x02%s", "FAMILY", "MUCK");
+        sprintf(buf, "\x01%s\x02%s", "FAMILY", "TinyMUD");
         queue_write(d, buf, strlen(buf));
     }
 
+    // The reported protocols cannot be overwridden by props on #0.
 
-    if (!sent_mccp) {
+    sprintf(buf, "\x01%s\x02%d", "ANSI", 1);
+    queue_write(d, buf, strlen(buf));
+
+    sprintf(buf, "\x01%s\x02%d", "GMCP", 0);
+    queue_write(d, buf, strlen(buf));
+
 #ifdef MCCP_ENABLED
-        sprintf(buf, "\x01%s\x02%d", "MCCP", 1);  
+    sprintf(buf, "\x01%s\x02%d", "MCCP", 1);  
 #else
-        sprintf(buf, "\x01%s\x02%d", "MCCP", 0);
+    sprintf(buf, "\x01%s\x02%d", "MCCP", 0);
 #endif
-        queue_write(d, buf, strlen(buf));
-    }
+    queue_write(d, buf, strlen(buf));
+
+    // send 0 for now, until MCP code is re-audited
+    sprintf(buf, "\x01%s\x02%d", "MCP", 0);
+    queue_write(d, buf, strlen(buf));
+
+    sprintf(buf, "\x01%s\x02%d", "MSDP", 0);
+    queue_write(d, buf, strlen(buf));
+
+    sprintf(buf, "\x01%s\x02%d", "MSP", 0);
+    queue_write(d, buf, strlen(buf));
+
+    sprintf(buf, "\x01%s\x02%d", "MXP", 0);
+    queue_write(d, buf, strlen(buf));
+
+    sprintf(buf, "\x01%s\x02%d", "PUEBLO", 1);
+    queue_write(d, buf, strlen(buf));
+
+    // send 0 for now, until re-implemented
+    sprintf(buf, "\x01%s\x02%d", "UTF-8", 0);
+    queue_write(d, buf, strlen(buf));
+
+    sprintf(buf, "\x01%s\x02%d", "VT100", 0);
+    queue_write(d, buf, strlen(buf));
+
+    sprintf(buf, "\x01%s\x02%d", "XTERM 256 COLORS", 1);
+    queue_write(d, buf, strlen(buf));
+
 
     queue_write(d, "\xFF\xF0", 2);
 }

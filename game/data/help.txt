@@ -30,12 +30,16 @@ Loki     - Who rewrote the indexing of the help file for ease of
 Foxen    - For the creation of Fuzzball MUCK, and FB6.
 Points   - For a lot of his code work on FB6 based code that we use.
 Nodaitsu - Created the file routines we use.
+Hinoserm - Extensive telnet negotiation support and the new
+           webserver code.
+Alynna   - IPv6, UDP, Realms, and miscellaneous primitives.
 
 And the billion other people who took part in the creation of the
 original TinyMUCK, TinyMUD, TinyMUCKfb, NeonMUCK, GlowMUCK and any 
 other mu* that ProtoMUCK may of derived from.  See '@credits'.
 
-Email Corrections to this Help File to Nakoruru08@hotmail.com
+Corrections to this list can be requested via a feature request:
+https://code.google.com/p/zetamuck/issues/entry?template=Documentation%20errata
 ~
 ~
 Basic Commands|index1|INDEX 1|INDEX
@@ -4028,3 +4032,36 @@ A list of compile-time options that you can specify when you compile your game:
 --disable-compress            Disable database compression
 --enable-asroot               (CAREFUL) Allows running the game as root on low ports
 --enable-ipv6                 Enables IPv6 support
+~~~~~
+MSSP SUPPORT|MSSP
+MSSP Support
+------------
+This server implements support for MSSP, which allows game grawlers to obtain
+information about various game stats from the connection screen.
+
+MSSP variables are defined by storing props in the ~MSSP propdir on #0. A list
+of commonly supported variables along with details of how the specification
+works at the network layer can be found at the following URL:
+
+http://tintin.sourceforge.net/mssp/
+
+
+In addition, the game will automatically serve certain fields even if they
+are not defined on #0. If a corresponding prop is found, that value will be
+preferred over the defaults listed below.
+
+NAME:      The name of the game as defined by @tune muckname.
+PLAYERS:   The number of player objects as reported by @stats.
+UPTIME:    Time since the last game restart.
+HOSTNAME:  The hostname of the server as defined by the @tune servername.
+           A value of "localhost" will cause this field to be omitted.
+PORT:      The port of the game as defined by the @tune mainport.
+CODEBASE:  A value of "ZetaMUCK". Version reporting may be added later.
+FAMILY:    A value of "TinyMUD", which is the nearest ancestor to TinyMUD
+           that is legal according to the MTTS spec.
+
+
+NOTE: The game returns fields for all Protocols defined by MSSP, but these
+      cannot be overridden by props on #0 as they define features that can
+      only be implemented through hardcode. Only features that are enabled
+      at compile time will be advertised.
