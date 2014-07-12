@@ -4045,7 +4045,6 @@ works at the network layer can be found at the following URL:
 
 http://tintin.sourceforge.net/mssp/
 
-
 In addition, the game will automatically serve certain fields even if they
 are not defined on #0. If a corresponding prop is found, that value will be
 preferred over the defaults listed below.
@@ -4057,11 +4056,15 @@ HOSTNAME:  The hostname of the server as defined by the @tune servername.
            A value of "localhost" will cause this field to be omitted.
 PORT:      The port of the game as defined by the @tune mainport.
 CODEBASE:  A value of "ZetaMUCK". Version reporting may be added later.
-FAMILY:    A value of "TinyMUD", which is the nearest ancestor to TinyMUD
+FAMILY:    A value of "TinyMUD", which is the nearest ancestor to TinyMUCK
            that is legal according to the MTTS spec.
-
 
 NOTE: The game returns fields for all Protocols defined by MSSP, but these
       cannot be overridden by props on #0 as they define features that can
       only be implemented through hardcode. Only features that are enabled
       at compile time will be advertised.
+
+Examples of well-known directory services implementing MSSP:
+ * http://mudstats.com/
+ * http://www.mudbytes.net/index.php?a=mudlist&s=mssp
+
