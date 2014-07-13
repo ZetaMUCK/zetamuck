@@ -4357,6 +4357,12 @@ process_commands(void)
         nprocessed = 0;
         for (d = descriptor_list; d; d = dnext) {
             dnext = d->next;
+
+            if (DR_RAW_FLAGS(d, DF_WELCOMING)) {
+                // skip command processing until welcome screen is rendered
+                continue;
+            }
+
             if (d->type == CT_MUF) {
                 sprintf(buf, "@Ports/%d/MUF", d->cport);
                 mufprog = get_property_dbref((dbref) 0, buf);
