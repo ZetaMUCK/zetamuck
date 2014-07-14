@@ -75,8 +75,8 @@ items, exits, rooms, etc. The ones that actually create a new
 object usually require that the players have a BUILDER's bit in
 order to use them.
 Descriptions:
-@ansidescribe      @describe          @htmldescribe       
-@iansidescribe     @idescribe         @ihtmldescribe
+@describe          @htmldescribe       
+@idescribe         @ihtmldescribe
 
 Object Creation and Destruction:
 @action            @create            @dig                @open
@@ -843,27 +843,24 @@ etc.
 
 Use of this command can be prevented by setting @tune building=no.
 ~~~~~
-@idescribe|@iansidescribe|@ihtmldescribe
+@idescribe|@ihtmldescribe|@idesc|@ihtmldesc
 @idescribe <object> [=<text>]
-@iansidescribe <object> [=<text>]
 @ihtmldescribe <object> [=<text>]
 ---------------------------------
 
 Sets the idescription field of <object> to <text>.  If <text> is not
 specified, the idescription field is cleared. An idescription is what
-is seen on the inside of a vehicle object, when a player inside of it
+is seen on the inside of an object, when a player inside of it
 takes a look.
 This command is the same as:
 '@set <object>=_/ide:[text]'
-'@set <object>=_/ianside:[text]'
 '@set <object>=_/ihtmlde:[text]'
 
-The ansi function sets the iansidescription on an object, and the html
-one sets the ihtmldescription on an object.
+The HTML version of this description is only seen by players who have
+connected with the Pueblo client.
 ~~~
-@describe|@ansidescribe|@htmldescribe|@DESC
+@describe|@htmldescribe|@DESC|@HTMLDESC
 @describe <object> [=<text>]
-@ansidescribe <object> [=<text>]
 @htmldescribe <object> [=<text>]
 --------------------------------
 Permissions: !GUEST
@@ -872,11 +869,10 @@ specified, the description field is cleared. A description is what is
 seen when a player looks at something.
 These commands are the same as:
 '@set <object>=_/de:[text]'
-'@set <object>=_/anside:[text]'
 '@set <object>=_/htmlde:[text]'
 
-The ansi function sets the ansidescription on an object, and the html
-one sets the htmldescription on an object.
+The HTML version of this descriptionis only seen by players who have
+connected with the Pueblo client.
 ~
 @credits
 @credits
@@ -1800,7 +1796,6 @@ affect MUF commands that have been put in over the in-server commands,
 but only affects the versions of these commands built into the MUCK.
 
 @describe          @ihtmldescibe        @propset
-@ansidescribe      @iansidescribe       @purge
 @htmldescribe      @idescribe           @set
 @chlock            @kill                @success
 @chown             @link                @sweep/scan
@@ -1812,7 +1807,7 @@ but only affects the versions of these commands built into the MUCK.
 @fail              @osuccess            give
 @find              @owned               gripe 
 @flock             @pecho               whisper
-@relink
+@relink            @purge
 ~~~~
 LOGWALL|!
 LOGWALL (!)
@@ -2658,21 +2653,19 @@ See OUTPUTPREFIX.
 strings|MESSAGES
 Strings
 -------
-Objects have several standard strings (Lucky 13):
+Objects have several standard strings:
 
 @name      1) a name.
 @desc      2) a description.
 @htmldesc  3) an html description (for web/pueblo users).
-@ansidesc  4) an ansi description.
-@idesc     5) an inside description (for vehicles).
-@ihtmldesc 6) an inside html desc (for web/pueblo users).
-@iansidesc 7) an inside ansi description.
-@succ      8) a success message (seen by the player).
-@fail      9) a fail message (seen by the player).
-@drop     10) a drop message (seen by the player).
-@osucc    11) an osuccess message (seen by others).
-@ofail    12) an ofail message (seen by others).
-@odrop    13) an odrop message (seen by others).
+@idesc     4) an inside description (for vehicles).
+@ihtmldesc 5) an inside html desc (for web/pueblo users).
+@succ      6) a success message (seen by the player).
+@fail      7) a fail message (seen by the player).
+@drop      8) a drop message (seen by the player).
+@osucc     9) an osuccess message (seen by others).
+@ofail    10) an ofail message (seen by others).
+@odrop    11) an odrop message (seen by others).
 
 See properties.
 

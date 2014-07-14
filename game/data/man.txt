@@ -76,7 +76,6 @@ Property Prims:
   SETDESC     SETSUCC       SETFAIL         SETDROP       SETOSUCC
   SETOFAIL    SETODROP      SUCC            FAIL          DROP
   OSUCC       OFAIL         ODROP           GETLOCKSTR  
-  ANSIDESC    SETANSIDESC   IANSIDESC       SETIANSIDESC
   REFLIST_ADD REFLIST_FIND  REFLIST_DEL     COPYPROPS
 
 See: PRIMS3
@@ -327,7 +326,6 @@ DESC        IDESC         HTMLDESC        IHTMLDESC     PROPDIR?
 SETDESC     SETSUCC       SETFAIL         SETDROP       SETOSUCC
 SETOFAIL    SETODROP      SUCC            FAIL          DROP
 SUCC        OFAIL         ODROP           GETLOCKSTR  
-ANSIDESC    SETANSIDESC   IANSIDESC       SETIANSIDESC
 REFLIST_ADD REFLIST_FIND  REFLIST_DEL     COPYPROPS
 
 ~
@@ -988,9 +986,9 @@ d = any dbref
 
 Converts integer i to object reference d.
 ~
-DESC|IDESC|HTMLDESC|IHTMLDESC|ANSIDESC|IANSIDESC
+DESC|IDESC|HTMLDESC|IHTMLDESC
 
-desc ansidesc iansidesc idesc htmldesc ihtmldesc( d -- s )
+desc idesc htmldesc ihtmldesc( d -- s )
 ------------------------------------------------
 Level: M1 Apprentice
 d = Any valid dbref.
@@ -1000,13 +998,10 @@ Takes object d and returns the contents of the appropriate
 description field. It is an inserver definition for:
 "<prop>" getpropstr
 desc      = The description to be shown non-Pueblo users for an object.
-ansidesc  = The description to be shown with color support.
 htmldesc  = The description to be shown to Pueblo users, supports 
             HTML scripting.
 idesc     = The description to be shown non-Pueblo users when on the
             inside of an object. Ideal for vehicles.
-iansidesc = The color description to be shown users on inside of object.
-            Ideal for vehicles.
 ihtmldesc = The description to be shown users on a Pueblo supported
             client when on the inside of an object. Ideal for vehicles.
 
@@ -1861,7 +1856,7 @@ If a player is set = Z, they cannot use set to set Z flags.
 Set cannot be used to set a program = AUTOSTART
 Set cannot be used to set X flags, or M or W bits.
 ~
-SETDESC|SETSUCC|SETFAIL|SETDROP|SETOSUCC|SETOFAIL|SETODROP|SETANSIDESC|SETIANSIDESC
+SETDESC|SETSUCC|SETFAIL|SETDROP|SETOSUCC|SETOFAIL|SETODROP
 
 setdesc setsucc setfail setdrop setosucc setofail setodrop
 setidesc sethtmldesc setihtmldesc (d s -- )
@@ -1877,7 +1872,6 @@ all actually $defines to addprop with the apporpriate property name.
 They are effectively defined as:
 $define setdesc      "_/de"  swap 0 addprop $enddef
 $define setidesc     "_/ide" swap 0 addprop $enddef
-$define setansidesc  "_/
 $define sethtmldesc  "_/htmlde" swap 0 addprop $enddef
 $define setihtmldesc "_/ihtmlde" swap 0 addprop $enddef
 $define setsucc      "_/sc"  swap 0 addprop $enddef
