@@ -3533,8 +3533,8 @@ Proto 2.0 Command Prop extensions:
    In this case, the trigger exit is actually the object the command prop resides on.
 
 2) EXITs can be specified in command props. These are not recommended for general
-   grid building purposes as they do not support @succ/fail/drop/etc. messages, and
-   are less easily maintained by other users.
+   grid building purposes as they do not support @locks, @succ/fail/drop/etc.
+   messages, and are less easily maintained by other users.
    
    When an EXIT is specified in a command prop, it will move anyone using the
    command to the *target* of the exit IF any of the following permissions 
