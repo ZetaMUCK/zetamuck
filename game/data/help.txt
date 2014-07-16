@@ -3523,6 +3523,7 @@ the other two.
 
 Proto 2.0 Command Prop extensions:
 1) ROOMs can be specified in command props.
+
    When a ROOM is specified in a command prop, it will move anyone using the
    command to the specified room IF any of the following permissions checks pass:
    a) The trigger player is WIZARD or higher
@@ -3530,7 +3531,11 @@ Proto 2.0 Command Prop extensions:
    c) The trigger player controls the destination
    d) The destination is JUMP_OK.
    In this case, the trigger exit is actually the object the command prop resides on.
-2) EXITs can be specified in command props.
+
+2) EXITs can be specified in command props. These are not recommended for general
+   grid building purposes as they do not support @succ/fail/drop/etc. messages, and
+   are less easily maintained by other users.
+   
    When an EXIT is specified in a command prop, it will move anyone using the
    command to the *target* of the exit IF any of the following permissions 
    checks pass:
@@ -3540,7 +3545,9 @@ Proto 2.0 Command Prop extensions:
    d) The exit is JUMP_OK.
    In this case, the trigger exit is the exit in question and it will appear for
    all intents and purposes that you have passed through the exit.
+
 3) THINGs can be specified in command props.
+
    When an THING is specified in a command prop, it will move anyone using the
    command to the *target* of the exit IF any of the following permissions 
    checks pass:
