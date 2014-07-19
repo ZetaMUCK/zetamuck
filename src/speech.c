@@ -480,7 +480,7 @@ notify_html_listeners(int descr, dbref who, dbref xprog, dbref obj,
     buf2[0] = '\0';
 
     nohbuf = html_escape(msg);
-    noabuf = tct(buf2, nohbuf);
+    noabuf = tct(nohbuf, buf2);
 
     if (tp_listeners && (tp_listeners_obj || Typeof(obj) == TYPE_ROOM)) {
         listenqueue(descr, who, room, obj, obj, xprog, "_listen", nohbuf,
