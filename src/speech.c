@@ -477,6 +477,8 @@ notify_html_listeners(int descr, dbref who, dbref xprog, dbref obj,
     if (obj == NOTHING)
         return 0;
 
+    buf2[0] = '\0';
+
     nohbuf = html_escape(msg);
     noabuf = tct(buf2, nohbuf);
 
