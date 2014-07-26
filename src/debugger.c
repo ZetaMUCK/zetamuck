@@ -259,13 +259,12 @@ muf_backtrace(dbref player, dbref program, int count, struct frame *fr)
                 --fntop;
 
             bufend += sprintf(buf2, "%.512s" SYSWHITE "(" SYSNORMAL, ptr);
-            for (k = 0; k < fntop->data.mufproc->args; ++k) {
-                const char *nam = scopedvar_getname(fr, lev, k);
+            //for (k = 0; k < fntop->data.mufproc->args; ++k) {
+            //    const char *nam = scopedvar_getname(fr, lev, k);
+            const char *nam;
+            for (k = 0; (nam = scopedvar_getname(fr, lev, k)); ++k) {
                 char *val;
 
-                if (!nam) {
-                    break;
-                }
                 varinst = scopedvar_get(fr, lev, k);
                 val = insttotext(fr, lev, varinst, buf3, sizeof(buf3), 30,
                                  program);
