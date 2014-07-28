@@ -252,17 +252,20 @@ muf_backtrace(dbref player, dbref program, int count, struct frame *fr)
         if (ptr) {
             int k;
             char *bufend = buf2;
-            struct inst *fntop = fr->pc;
+            /* Use the function we're currently iterating over, *not* the
+             * topmost one. -davin */
+            //struct inst *fntop = fr->pc;
+            struct inst *fntop = pinst - (fr->system.top - j + 1);
             struct inst *varinst;
 
             while (fntop->type != PROG_FUNCTION)
                 --fntop;
 
             bufend += sprintf(buf2, "%.512s" SYSWHITE "(" SYSNORMAL, ptr);
-            //for (k = 0; k < fntop->data.mufproc->args; ++k) {
-            //    const char *nam = scopedvar_getname(fr, lev, k);
-            const char *nam;
-            for (k = 0; (nam = scopedvar_getname(fr, lev, k)); ++k) {
+            for (k = 0; k < fntop->data.mufproc->args; ++k) {
+                const char *nam = scopedvar_getname(fr, lev, k);
+            //const char *nam;
+            //for (k = 0; (nam = scopedvar_getname(fr, lev, k)); ++k) {
                 char *val;
 
                 varinst = scopedvar_get(fr, lev, k);
