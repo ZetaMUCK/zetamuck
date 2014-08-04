@@ -2137,7 +2137,15 @@ db_hash_password(int type, char *out, const char *password, const char *saltin)
 
     switch (type) {
         case HTYPE_SHA1SALT:
-            sprintf(buf, "%.8s%s", salt, password);
+            /* glibc <1.7 breaks using sprintf on random input bytes when using
+             * a UTF8 locale. This is a genuine glibc bug, but is still present
+             * in many distros:
+             *
+             *  https://code.google.com/p/zetamuck/issues/detail?id=33 */
+            //sprintf(buf, "%.8s%s", salt, password);
+            memcpy(buf, salt, 8);
+            buf[8] = ':';
+            strcpy(buf + 9, password);
             SHA1hex(buf, buf, strlen(password) + 8);
             sprintf(out, "%s:%s:%s", db_hash_valtotag(type), buf, sbuf);
             break;
