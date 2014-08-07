@@ -8,6 +8,12 @@
 # include "mcp.h"
 #endif
 
+#ifdef UTF8_SUPPORT
+# include <locale.h>
+# include <wchar.h>
+# include <iconv.h>
+#endif
+
 #ifdef USE_SSL
 # if defined (HAVE_OPENSSL_SSL_H)
 #  include <openssl/ssl.h>
@@ -47,7 +53,11 @@
 #define TELOPT_MSSP     '\x46'
 #define TELOPT_MSSP_VAR '\x01'
 #define TELOPT_MSSP_VAL '\x02'
+
 #define TELOPT_CHARSET  '\x2A'
+#define TELOPT_CHARSET_REQUEST  '\x01'
+#define TELOPT_CHARSET_ACCEPTED '\x02'
+#define TELOPT_CHARSET_REJECTED '\x03'
 
 #define TELOPT_BRK      '\xF3'
 #define TELOPT_IP       '\xF4'
@@ -67,10 +77,11 @@
                              d->booted. */
 #define BOOT_SAFE       4 /* disconnect when the descriptor has no tasks or output queued */
 
-#define ENC_RAW         0
-#define ENC_ASCII       1
-#define ENC_LATIN1      2 /* not actually used yet */
-#define ENC_UTF8        3 /* must be highest, per our telopt processing */
+#define ENC_RAW         0 // Default for CT_MUF. Proto's old default for players. (never again)
+#define ENC_ASCII       1 // Default for players, if @tune ascii_descrs is set.
+#define ENC_LATIN1      2 // Default for CT_HTTP. Players default to it without @tune ascii_descrs.
+#define ENC_IBM437      3 // Never a default. Negotiated or set manually.
+#define ENC_UTF8        4 // Never a default. Negotiated or set manually.
 
 #define SOCKOPT_NOQUEUE      0
 #define SOCKOPT_SIMPLEQUEUE  1
@@ -235,6 +246,11 @@ struct descriptor_data {
     struct mccp             *mccp;
 #endif
     struct telopt            telopt;
+#ifdef UTF8_SUPPORT
+    mbstate_t                mbstate_in;
+    iconv_t                  iconv_in;
+#endif
+
 };
 
 #define DF_HTML           0x1 /* Connected to the internal WEB server.

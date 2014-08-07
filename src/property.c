@@ -10,17 +10,13 @@
 #include "interface.h"
 #include "nan.h"
 
-#ifdef COMPRESS
 extern const char *pcompress(const char *);
 
 #ifdef ARCHAIC_DATABASES
 extern const char *old_uncompress(const char *);
 #endif
 
-#define alloc_compressed(x) alloc_string(pcompress(x))
-#else /* !COMPRESS */
-#define alloc_compressed(x) alloc_string(x)
-#endif /* COMPRESS */
+#define alloc_compressed(x) (table_initialized ? alloc_string(pcompress(x)) : alloc_string(x))
 
 /* property.c
    A whole new lachesis mod.

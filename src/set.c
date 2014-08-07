@@ -2016,17 +2016,20 @@ do_encoding(int descr, dbref player, const char *arg) {
     if (!arg || arg[0] == '\0') {
         anotify(player, CINFO "Current character encoding:");
         if (d->encoding == ENC_ASCII) {
-            anotify(player, CINFO "US-ASCII");
+            anotify(player, CNOTE "US-ASCII");
 #ifdef UTF8_SUPPORT
-        } else if (d->encoding == ENC_LATIN1) {
-            anotify(player, CINFO "Latin1"
-        }
         } else if (d->encoding == ENC_UTF8) {
-            anotify(player, CINFO "UTF-8");
+            anotify(player, CNOTE "UTF-8");
 #endif
+        } else if (d->encoding == ENC_LATIN1) {
+            anotify(player, CNOTE "ISO-8859-1");
+        } else if (d->encoding == ENC_IBM437) {
+            anotify(player, CNOTE "IBM437");
         } else if (d->encoding == ENC_RAW) {
+            // Shouldn't happen, but...
             anotify(player, CFAIL "RAW");
         } else {
+            // Also shouldn't happen.
             anotify(player, CFAIL "<unknown>");
         }
         return;
@@ -2041,36 +2044,40 @@ do_encoding(int descr, dbref player, const char *arg) {
                 !string_compare(arg, "UNICODE") ) {
         d->encoding = ENC_UTF8;
         anotify(player, CSUCC "Encoding set.");
-#endif
-    } else if ( !string_compare(arg, "RAW") ) {
-        d->encoding = ENC_RAW;
+    } else if ( !string_compare(arg, "IBM437") || !string_compare(arg, "CP437")) {
+        d->encoding = ENC_IBM437;
         anotify(player, CSUCC "Encoding set.");
-        anotify(player, CFAIL "Warning: Your terminal may render garbage in this mode.");
+#endif
+    } else if ( !string_compare(arg, "ISO-8859-1") || !string_compare(arg, "LATIN-1") ||
+                !string_compare(arg, "LATIN1")) {
+        d->encoding = ENC_LATIN1;
+        anotify(player, CSUCC "Encoding set.");
+    } else if ( !string_compare(arg, "RAW") ) {
+        anotify(player, CFAIL "Players are not allowed to have a raw encoding.");
     } else { /* unrecognized, show help */
         anotify(player, CFAIL "Unrecognized encoding type.");
         anotify(player, CINFO "Supported encodings:");
 #ifdef UTF8_SUPPORT
         if (d->encoding == ENC_UTF8) {
-            anotify(player, CINFO "    UTF-8 (current)");
+            anotify(player, CNOTE "    UTF-8 (current)");
         } else {
-            anotify(player, CINFO "    UTF-8");
+            anotify(player, CNOTE "    UTF-8");
         }
-        if (d->encoding == ENC_LATIN1) {
-            anotify(player, CINFO "    Latin1 (current)");
+        if (d->encoding == ENC_IBM437) {
+            anotify(player, CNOTE "    IBM437 (current)");
         } else {
-            anotify(player, CINFO "    Latin1");
+            anotify(player, CNOTE "    IBM437");
         }
 #endif
         if (d->encoding == ENC_ASCII) {
-            anotify(player, CINFO "    US-ASCII (current)");
+            anotify(player, CNOTE "    US-ASCII (current)");
         } else {
-            anotify(player, CINFO "    US-ASCII");
+            anotify(player, CNOTE "    US-ASCII");
         }
-        if (d->encoding == ENC_RAW) {
-            anotify(player, CINFO "      RAW (current)");
+        if (d->encoding == ENC_LATIN1) {
+            anotify(player, CNOTE "    Latin1 (current)");
         } else {
-            anotify(player, CINFO "      RAW (not recommended)");
+            anotify(player, CNOTE "    Latin1");
         }
-
     }
 }

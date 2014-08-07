@@ -80,11 +80,7 @@ typedef struct plist *PropPtr;
 #define SetPDataLok(x,z) {(x)->data.lok = z;}
 #define SetPDataFVal(x,z) {(x)->data.fval = z;}
 
-#ifdef COMPRESS
-#define PropDataUNCStr(x) (((x)->flags & PROP_NOCOMPRESS || !(x)->data.str || !*((x)->data.str)) ? (x)->data.str : get_uncompress((x)->data.str))
-#else
-#define PropDataUNCStr(x) ((x)->data.str)
-#endif
+#define PropDataUNCStr(x) ((table_initialized && ((x)->flags & PROP_NOCOMPRESS || !(x)->data.str || !*((x)->data.str))) ? (x)->data.str : get_uncompress((x)->data.str))
 #define PropDataStr(x) ((x)->data.str)
 #define PropDataVal(x) ((x)->data.val)
 #define PropDataRef(x) ((x)->data.ref)
