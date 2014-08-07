@@ -26,6 +26,12 @@
 # endif
 #endif
 
+extern int printfdbg(int rarg);
+#define printf(...) (printfdbg(printf(__VA_ARGS__)))
+#define fprintf(...) (printfdbg(fprintf(__VA_ARGS__)))
+#define sprintf(...) (printfdbg(sprintf(__VA_ARGS__)))
+#define snprintf(...) (printfdbg(snprintf(__VA_ARGS__)))
+
 #define STRINGIFY(s) _STRINGIFY(s)
 #define _STRINGIFY(s) #s
 

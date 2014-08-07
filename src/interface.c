@@ -3494,9 +3494,9 @@ queue_string(struct descriptor_data *d, const char *s)
     int result, len = strlen(s);
     const char *sp;
     char *filtered, *fp;
+    const char *send = s + len - 1;
     // char *fend;
 #ifdef UTF8_SUPPORT
-    const char *send = s + len - 1;
     char unsigned remap;
     int wclen;
     wchar_t wchar;
@@ -3847,7 +3847,7 @@ process_telnet_IAC(struct descriptor_data *d, char *q, char *p, char *pend)
                 if (d->encoding == ENC_LATIN1) {
                     // escaped ÿ
 #ifndef UTF8_SUPPORT
-                    *p++ = TELNET_IAC;
+                    *p++ = TELOPT_IAC;
 #else
                     if ((pend - p) >= 3) {
                         *p++ = '\xC3';
@@ -7862,3 +7862,8 @@ module_free(struct module *m)
 
 
 #endif
+
+int printfdbg(int rarg) {
+    assert(rarg > -1 && "glibc bug tripped: operation would truncate a multi-byte sequence!" && rarg);
+    return rarg;
+}
