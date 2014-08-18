@@ -23,6 +23,7 @@
 #include "interp.h"
 #include "newhttp.h"            /* hinoserm */
 #include "netresolve.h"         /* hinoserm */
+#include "telnet.h"
 
 /* Cynbe stuff added to help decode corefiles:
 #define CRT_LAST_COMMAND_MAX 65535
@@ -120,8 +121,6 @@ void remember_player_descr(dbref player, int);
 void welcome_user(struct descriptor_data *d);
 void forget_player_descr(dbref player, int);
 void help_user(struct descriptor_data *d);
-void telopt_sb_termtype(struct descriptor_data *d);
-void telopt_sb_charset(struct descriptor_data *d);
 void mssp_send(struct descriptor_data *d);
 void charset_send(struct descriptor_data *d);
 void announce_connect(int descr, dbref);
@@ -131,19 +130,6 @@ void init_descr_count_lookup(void);
 void init_descriptor_lookup(void);
 void process_commands(void);
 void shovechars(void);
-
-#ifdef MCCP_ENABLED
-void mccp_start(struct descriptor_data *d, int version);
-void mccp_end(struct descriptor_data *d);
-bool mccp_process_compressed(struct descriptor_data *d);
-#define UMIN(a,b) ((a)<(b)?(a):(b))
-#endif
-
-
-
-void termtypes_init(struct telopt *t);
-void telopt_init(struct telopt *t);
-void telopt_clean(struct telopt *t);
 
 
 #if defined(DESCRFILE_SUPPORT) || defined(NEWHTTPD)
@@ -1268,7 +1254,8 @@ queue_unhtml(struct descriptor_data *d, char *msg)
 			strcpy(buf, html_escape2(msg, 0));
 		} */
     } else {
-        strncpy(buf, msg, BUFFER_LEN);
+        return queue_ansi(d, msg);
+        //strncpy(buf, msg, BUFFER_LEN);
     }
     return queue_ansi(d, buf);
 }
@@ -3186,21 +3173,6 @@ mcpframe_to_user(McpFrame *ptr)
 
 #endif
 
-/* Advertise telnet options. This probably shouldn't be called more than once
- * per client connection. */
-void
-telopt_advertise(struct descriptor_data *d)
-{
-    queue_write(d, "\xFF\xFB\x46",       3); /* IAC WILL MSSP */
-    queue_write(d, "\xFF\xFB\x56\x0A",   4); /* IAC WILL TELOPT_COMPRESS2 (MCCP v2) */
-    queue_write(d, "\xFF\xFB\x2A",       3); /* IAC WILL CHARSET */
-    queue_write(d, "\xFF\xFD\x18",       3); /* IAC DO TERMTYPE */
-    queue_write(d, "\xFF\xFD\x1F",       3); /* IAC DO NAWS */
-    /* Can't IAC DO CHARSET due to Potato:
-     * https://code.google.com/p/potatomushclient/issues/detail?id=343 */
-    //queue_write(d, "\xFF\xFD\x2A",       3); /* IAC DO CHARSET */
-}
-
 struct descriptor_data *
 initializesock(int s, struct huinfo *hu, int ctype, int cport, int welcome)
 {
@@ -3242,6 +3214,7 @@ initializesock(int s, struct huinfo *hu, int ctype, int cport, int welcome)
     d->input.tail = &d->input.head;
     d->raw_input = 0;
     d->raw_input_at = 0;
+    d->bsescape = 0;
 #ifdef UTF8_SUPPORT
     d->raw_input_wclen = 0;
 #endif
@@ -3560,6 +3533,8 @@ queue_string(struct descriptor_data *d, const char *s)
             if ((unsigned char)*sp < 0x80) {
                 *fp++ = *sp;
                 continue;
+            } else {
+                *fp++ = ASCII_REPLACEMENT_CHAR;
             }
 
             continue;
@@ -3706,6 +3681,7 @@ freeqs(struct descriptor_data *d)
         FREE(d->raw_input);
     d->raw_input = 0;
     d->raw_input_at = 0;
+    d->bsescape = 0;
 #ifdef UTF8_SUPPORT
     d->raw_input_wclen = 0;
 #endif
@@ -3722,7 +3698,7 @@ save_command(struct descriptor_data *d, char *command, int len, int wclen)
     static char iconvbuf[MAX_COMMAND_LEN];
     char *inbuf_p = command;
     char *outbuf_p = iconvbuf;
-    int iconvreturn;
+    int iconvreturn = 0;
 
     *iconvbuf = '\0';
 
@@ -3792,191 +3768,113 @@ save_command(struct descriptor_data *d, char *command, int len, int wclen)
     return 1;
 }
 
-// Called by process_input to handle a telnet IAC sequence from a client.
-// Every "if" branch should return 1 to indicate that a character was processed.
-// The default is to return 0. (no sequence processed)
+/* Note that the char ** args are writable. This is so that we can rewind. */
 int
-process_telnet_IAC(struct descriptor_data *d, char *q, char *p, char *pend)
+process_backslash_escape(struct descriptor_data *d,
+        char **qptr, char *qend,
+        char **pptr, char *pend,
+        int *wclen_in)
 {
-    if (d->inIAC == TELOPT_IAC) {
-        // Client sent us IAC; assume IAC+NOP is safe and enable keepalives.
-        if (!DR_RAW_FLAGS(d, DF_KEEPALIVE)) {
-            DR_RAW_ADD_FLAGS(d, DF_KEEPALIVE);
+    int utf8len = 0; // number of UTF-8 bytes represented by a UCN escape
+    char *q = *qptr; // current string from the input queue
+    char *p = *pptr; // current location in the d->raw_input put buffer
+    char ucnbuf[9];  // holds "nnnnnnnn" + '\0'
+    int ucnlen = 0;  // number of bytes stored in ucnbuf
+    wchar_t wchar;   // the character the UCN escape maps to
+    int ucn_i;
+
+    if (*q == 92) { // backslash
+        if (d->bsescape < 2) {
+            // first or second
+            d->bsescape++;
+        } else {
+            // reset count
+            d->bsescape = 0;
         }
+        /* Consecutive backslashes beyond the second aren't worth noting. 
+         * Just keep the value of 2 until something more interesting happens. */
+
+        return 0;
+    }
+    if (!d->bsescape) {
+        // Not inside of an escape, boring.
+        return 0;
+    } else if (d->bsescape == 2) {
+        // Escaped escape, ignore it.
+        d->bsescape = 9;
+        return 0;
+    } else {
+        // Now we're getting somewhere. Do we want this letter?
         switch (*q) {
-            case TELOPT_BRK:   /* Break */
-            case TELOPT_IP:   /* Interrupt Processes */
-                save_command(d, BREAK_COMMAND, sizeof(BREAK_COMMAND), -2);
-                d->inIAC = 0;
-                break;
-            case TELOPT_AYT:{  /* AYT: Are You There? */
-                queue_write(d, "[Yes]\r\n", 7);
-                d->inIAC = 0;
-                break;
-            }
-            case TELOPT_EC:   /* Erase character */
-                if (p > d->raw_input)
-                    --p;
-                d->inIAC = 0;
-                break;
-            case TELOPT_EL:   /* Erase line */
-                p = d->raw_input;
-                d->inIAC = 0;
-                break;
-            case TELOPT_SB:   /* SB */ /* Go ahead. Treat as NOP */
-                if (d->telopt.sb_buf)
-                    free((void *)d->telopt.sb_buf);
-                d->telopt.sb_buf = (unsigned char *)malloc(TELOPT_MAX_BUF_LEN);
-                d->telopt.sb_buf_len = 0;
+#ifdef UTF8_SUPPORT
+            case 'u': // UCN escape \unnnn, basic multilingual plane (<=0xFFFF)
+                d->bsescape = 0;
+                ucnlen = 4;
 
-                d->inIAC = TELOPT_SB;
                 break;
-            case TELOPT_WILL:
-                d->inIAC = TELOPT_WILL;
+            case 'U': // UCN escape \Unnnnnnnn, extended plane
+                d->bsescape = 0;
+                ucnlen = 8;
+
                 break;
-            case TELOPT_WONT:
-                d->inIAC = TELOPT_WONT;
-                break;
-            case TELOPT_DO:
-                d->inIAC = TELOPT_DO;
-                break;
-            case TELOPT_DONT:
-                d->inIAC = TELOPT_DONT;
-                break;
-            case TELOPT_IAC:   /* IAC a second time */
-                if (d->encoding == ENC_LATIN1) {
-                    // escaped ÿ
-#ifndef UTF8_SUPPORT
-                    *p++ = TELOPT_IAC;
-#else
-                    if ((pend - p) >= 3) {
-                        *p++ = '\xC3';
-                        *p++ = '\xBF';
+#endif
+            default: // Nope. Reset state.
+                d->bsescape = 0;
+
+                return 0;
+        }
+        if (ucnlen) {
+            if (ucnlen && q + ucnlen < qend) {
+                for (ucn_i=0; ucn_i != ucnlen; ucn_i++) {
+                    if (isxdigit(*(q + 1 + ucn_i))) {
+                        ucnbuf[ucn_i] = *(q + 1 + ucn_i);
+                    } else {
+                        // invalid, ignore it
+                        return 0;
                     }
-                } else if (d->encoding == ENC_IBM437 && (pend - p) >= 3) {
-                    // escaped NBSP
-                    *p++ = '\xC2';
-                    *p++ = '\xA0';
-#endif
                 }
-                d->inIAC = 0;
-                break;
-            case TELOPT_NOP:
-            case TELOPT_AO:  /* Abort Output */
-            default:
-                d->inIAC = 0;
-                break;
-        }
-        return 1;
-    } else if (d->inIAC == TELOPT_SB) {
-        if (*q == '\xF0' && *(q-1) == '\xFF') {
-            d->telopt.sb_buf[d->telopt.sb_buf_len-1] = '\0';
-
-            /* Begin processing the TELOPT data buffer */
-            if (d->telopt.sb_buf_len) {
-                switch (d->telopt.sb_buf[0]) {
-                    case TELOPT_NAWS:
-                        if (d->telopt.sb_buf_len != 6)
-                            break;
-
-                        d->telopt.width  =  (d->telopt.sb_buf[1] <<8) | d->telopt.sb_buf[2];
-                        d->telopt.height =  (d->telopt.sb_buf[3] <<8) | d->telopt.sb_buf[4];
-                        
-                        /* that was easy */
-                        break;
-                    case TELOPT_TERMTYPE:
-                        telopt_sb_termtype(d);
-                        break;
-                    case TELOPT_CHARSET:
-                        telopt_sb_charset(d);
-                        break;
-                    default:
-                        break;
-                }
+            } else {
+                // not enough space for this escape, ignore it
+                return 0;
             }
-            free((void *)d->telopt.sb_buf); /* don't need the buffer anymore */
-            d->telopt.sb_buf = NULL;
-            d->telopt.sb_buf_len = 0;
+            // Read a full character. Advance the input queue.
+            *qptr = q + ucnlen;
 
-            d->inIAC = 0;
-        } else {
-            if (d->telopt.sb_buf_len < TELOPT_MAX_BUF_LEN)
-                d->telopt.sb_buf[d->telopt.sb_buf_len++] = *q;
-            else
-                d->inIAC = 0;
-        }
-        return 1;
-    } else if (d->inIAC == TELOPT_WILL) {
-        if (*q == TELOPT_TERMTYPE) { /* TERMTYPE */
-            queue_write(d, "\xFF\xFA\x18\x01\xFF\xF0", 6); /* IAC SB TERMTYPE SEND IAC SE */
-        } else if (*q == TELOPT_MSSP) {
-            mssp_send(d);
-        } else if (*q == TELOPT_NAWS) {
-            /* queue_write(d, "\xFF\xFD\x1F", 3); */ /* Oops, infinite loop */
-        } else if (*q == TELOPT_CHARSET) {
-            //log_status("DBUG: (%d) IAC WILL CHARSET\n",d->descriptor);
-            /* Just have to wait for the DO now. */
-        } else {
-            /* send back DONT option in all other cases */
-            queue_write(d, "\xFF\xFE", 2);
-            queue_write(d, q, 1);
-        }
-        d->inIAC = 0;
-        return 1;
-    } else if (d->inIAC == TELOPT_DO) {
-#ifdef MCCP_ENABLED
-        if (*q == TELOPT_MCCP2) {        /* TELOPT_COMPRESS2 */
-            d->telopt.mccp = 2;
-                
-            /* Thanks to SimpleMU, we're required to know the termtype before we can enable MCCP. */
-            if (d->telopt.termtypes_cnt && !d->mccp)
-                mccp_start(d, d->telopt.mccp);
-        } else if (*q == TELOPT_MSSP) {
-            mssp_send(d);
-        } else if (*q == TELOPT_NAWS) {
-        } else if (*q == TELOPT_CHARSET) {
-            charset_send(d);
-        } else {
-            /* Send back WONT in all cases */
-            queue_write(d, "\xFF\xFC", 2);
-            queue_write(d, q, 1);
-        }
-#else
-        queue_write(d, "\377\374", 2);
-        queue_write(d, q, 1);
-#endif
+            ucnbuf[ucn_i] = '\0';
+            // ucnbuf now contains the digits, convert to wchar_t integer
+            wchar = strtoul(ucnbuf, NULL, 16);
 
-        d->inIAC = 0;
-        return 1;
-    } else if (d->inIAC == TELOPT_DONT) {
-#ifdef MCCP_ENABLED
-        if (*q == TELOPT_MCCP2) {        /* TELOPT_COMPRESS2 */
-            d->telopt.mccp = 0;
-            mccp_end(d);
-        } else if (*q == TELOPT_MSSP) {
-        } else if (*q == TELOPT_NAWS) {
-        } else {
-            /* Send back WONT in all cases */
-            queue_write(d, "\377\xFC", 2);
-            queue_write(d, q, 1);
+            // convert this integer to UTF-8 bytes, reuse ucnbuf
+            wctomb(NULL, wchar);
+            utf8len = wctomb(ucnbuf, wchar);
+
+            if (wchar < 0x00A0) {
+                anotify_descriptor(d->descriptor, CFAIL "Input: Escapes \\u and \\U must not be used to encode ASCII. (< 00A0 ignored)\n");
+
+            }
+            if (wchar >= 0xD800 && wchar <= 0xDFFF) { // surrogate pairs
+                anotify_descriptor(d->descriptor, CFAIL "Input: Escape \\u must not encode a surrogate. Use \\U instead.\n");
+            }
+            
+
+            /* Do we have room for utf8len worth of integers + \n? 
+               We've already rewound over the backslash. */
+            if ((p - 1 + utf8len) > pend) {
+                // Nope.
+                return 0;
+            } else {
+                // Yes!
+                memcpy(p - 1, ucnbuf, utf8len);
+                *pptr = p + utf8len - 1;
+                return 1;
+            }
+
         }
-#else
-        queue_write(d, "\377\374", 2); 
-        queue_write(d, q, 1);
-#endif
-        d->inIAC = 0;
-        return 1;
-    } else if (d->inIAC == TELOPT_WONT) {
-        d->inIAC = 0;
-        return 1;
-    } else if (*q == TELOPT_IAC) {
-        /* Got TELNET IAC, store for next byte */
-        d->inIAC = TELOPT_IAC;
-        return 1;
     }
 
     return 0;
 }
+
 
 int
 process_input(struct descriptor_data *d)
@@ -4081,22 +3979,27 @@ process_input(struct descriptor_data *d)
             }
             p = d->raw_input;
         } else if (DR_RAW_FLAGS(d, DF_TELNET) && process_telnet_IAC(d, q, p, pend)) {
-            // This is where the telopt processing code used to be. It has been
-            // moved to process_telnet_IAC to keep process_input cleaner.
-            // It will return 0 if we should keep going.
+            /* This is where the telopt processing code used to be. It has been
+             * moved to process_telnet_IAC to keep process_input cleaner.
+             * It will return 0 if we should keep going.
+             *
+             * Any sort of processing for multi-character sequences (UTF-8,
+             * custom escape sequences, etc.) need to happen after this point as
+             * an IAC sequence must never be interrupted. */
         } else if (p < pend && !d->truncate) {
-            if ((*q == '\t')
-                & (d->type == CT_MUCK || d->type == CT_PUEBLO)) {
+            if (process_backslash_escape(d, &q, qend, &p, pend, &wcbuflen)) {
+                /* Similar to process_telnet_IAC(). Return true if the character
+                 * should not be written to the buffer. This function will end
+                 * up overwriting the initial backslash it allows into the
+                 * buffer if a complete escape sequence is detected.
+                 *
+                 * q, p, len, and wclen may be overwritten by this function call. */
+            } else if ((*q == '\t') && DR_RAW_FLAGS(d, DF_TELNET)) {
                 *p++ = ' ';
 #ifdef UTF8_SUPPORT
                 wcbuflen++;
 #endif
-            } else if ((*q == 8 || *q == 127)
-                       && (d->type == CT_MUCK || d->type == CT_PUEBLO
-#ifdef USE_SSL
-                                              || d->type == CT_SSL
-#endif
-            )) {
+            } else if ((*q == 8 || *q == 127) && DR_RAW_FLAGS(d, DF_TELNET)) {
                 /* if BS or DEL, delete last character */
                 if (p > d->raw_input) {
                     p--;
@@ -6835,6 +6738,18 @@ welcome_user(struct descriptor_data *d)
     char *ptr;
     char buf[BUFFER_LEN];
     const char *fname;
+    int buflen = 0;
+    char *outbuf = NULL;
+    // Used for .ans welcome screens
+    bool EOF_seen = 0;
+    int welcome_encoding = ENC_ASCII;
+    char ansbuf[BUFFER_LEN];
+    char *buf_p = buf;
+    char *ansbuf_p = ansbuf;
+    size_t bytesin;
+    size_t bytesout;
+
+    ansbuf[0] = '\0';
 
     if (d->type == CT_PUEBLO) {
         queue_ansi(d, "\r\nThis world is Pueblo 1.0 Enhanced.\r\n\r\n");
@@ -6902,41 +6817,98 @@ welcome_user(struct descriptor_data *d)
         fname = reg_site_welcome(d->hu->h->a);
         if (fname && (*fname == '.')) {
             strcpy(buf, WELC_FILE);
+            buflen = sizeof WELC_FILE - 1;
         } else if (fname && (*fname == '#')) {
-            if (tp_rand_screens > 0)
-                sprintf(buf, "data/welcome%d.txt",
+            if (tp_rand_screens > 0) {
+                buflen = sprintf(buf, "data/welcome%d.txt",
                         (rand() % tp_rand_screens) + 1);
-            else
+            } else {
                 strcpy(buf, WELC_FILE);
+                buflen = sizeof WELC_FILE - 1;
+            }
         } else if (fname) {
             strcpy(buf, "data/welcome/");
-            ptr = buf + strlen(buf);
+            ptr = buf + sizeof "data/welcome/" - 1;
             while (*fname && (*fname != ' '))
                 (*(ptr++)) = (*(fname++));
             *ptr = '\0';
-            strcat(buf, ".txt");
+            strcpy(ptr, ".txt");
+            buflen = ptr - buf + 3;
         } else if (reg_site_is_barred(d->hu->h->a) == TRUE) {
             strcpy(buf, BARD_FILE);
+            buflen = sizeof BARD_FILE - 1;
         } else if (tp_rand_screens > 0) {
-            sprintf(buf, "data/welcome%d.txt", (rand() % tp_rand_screens) + 1);
+            buflen = sprintf(buf, "data/welcome%d.txt", (rand() % tp_rand_screens) + 1);
         } else {
             strcpy(buf, WELC_FILE);
+            buflen = sizeof WELC_FILE - 1;
         }
 #ifdef MCP_SUPPORT
         mcp_negotiation_start(&d->mcpframe, d);
 #endif
-        if ((f = fopen(buf, "r")) == NULL) {
-            queue_unhtml(d, DEFAULT_WELCOME_MESSAGE);
-            perror("spit_file: welcome.txt");
+        assert(buflen); // testing
+        if (buflen >= 5 && (buflen + 1) < BUFFER_LEN ) {
+            if (d->encoding == ENC_UTF8 &&
+                    strcpy(buf + buflen - 3, "utf8") && (f = fopen(buf, "r"))) {
+                welcome_encoding = ENC_UTF8;
+            } else if ((d->encoding == ENC_IBM437 || d->encoding == ENC_UTF8) &&
+                    strcpy(buf + buflen - 3, "ans") && (f = fopen(buf, "r"))) {
+                welcome_encoding = ENC_IBM437;
+            } else {
+                strcpy(buf + buflen - 3, "txt");
+                f = fopen(buf, "r");
+            }
         } else {
+            f = fopen(buf, "r");
+        }
+        if (f == NULL) {
+            queue_unhtml(d, DEFAULT_WELCOME_MESSAGE);
+            fprintf(stderr, "spit_file: %s\n", buf);
+            //perror("spit_file: welcome.txt");
+        } else {
+            /* Rewritten to allow IBM437 and UTF-8 welcome sceen alternatives.
+             * It also has better null and bounds checking. */
             while (fgets(buf, sizeof buf, f)) {
-                ptr = index(buf, '\n');
-                if (ptr && ptr > buf && *(ptr - 1) != '\r') {
-                    *ptr++ = '\r';
-                    *ptr++ = '\n';
-                    *ptr++ = '\0';
+                if (welcome_encoding == ENC_IBM437 && d->encoding != ENC_IBM437) {
+                    /* .ans files need a conversion pass if the encoding of the
+                     * target descriptor is not ENC_IBM437. */
+                    buf_p = buf;
+                    ansbuf_p = ansbuf;
+                    // fgets: most useless return ever.
+                    bytesin = strlen(buf);
+                    bytesout = sizeof ansbuf;
+
+                    buflen = strlen(buf);
+
+                    iconv_global = iconv_open("UTF-8", "IBM437");
+                    iconv(iconv_global, &buf_p, &bytesin, &ansbuf_p, &bytesout);
+                    iconv_close(iconv_global);
+                    ptr = strpbrk(ansbuf, "\n\0\x1A");
+                    outbuf = ansbuf;
+                } else {
+                    ptr = strpbrk(buf, "\n\0\x1A");
+                    outbuf = buf;
                 }
-                queue_unhtml(d, buf);
+                if (*ptr == '\x1A') {
+                    /* Truncate at EOF. Mostly used to prevent rendering the
+                     * "SAUCE" of .ans files which have been loaded into the
+                     * welcome screen for testing purposes. */
+                    EOF_seen = 1;
+                }
+                if (ptr >= (outbuf + BUFFER_LEN - 3)) {
+                    // truncate it
+                    ptr = outbuf + BUFFER_LEN - 3;
+                    *ptr++ = '\r';
+                    *ptr = '\n';
+                } else if (ptr != outbuf && *(ptr - 1) != '\r') {
+                    *ptr++ = '\r';
+                    *ptr = '\n';
+                }
+                *(ptr + 1) = '\0';
+                queue_unhtml(d, outbuf);
+                if (EOF_seen) {
+                    break;
+                }
             }
             fclose(f);
         }
@@ -7071,638 +7043,6 @@ ignorance(dbref src, dbref tgt)
 }
 #endif
 
-#ifdef MCCP_ENABLED
-
-void
-do_compress(dbref player, int descr, const char *arg)
-{
-    struct descriptor_data *d = descrdata_by_descr(descr);   
-
-    if (!strcmp(arg, "off")) {
-        if (d->mccp) {
-            mccp_end(d);
-            queue_ansi(d, "MCCP Compression Ended.\r\n");
-        } else
-            queue_ansi(d, "You do not have MCCP turned on!\r\n");
-    } else if (!strcmp(arg, "on")) {
-        if (d->mccp) {
-            queue_ansi(d, "You already have MCCP turned on!\r\n");
-        } else if (!d->telopt.mccp) {
-            queue_ansi(d, "Your client does not appear to support MCCP.\r\n");
-        } else {
-            mccp_start(d, d->telopt.mccp);
-            queue_ansi(d, "MCCP Compression Started.\r\n");
-        }                      
-    } else
-        queue_ansi(d, "Compression Help Goes Here\r\n");
-}
-
-
-bool
-mccp_process_compressed(struct descriptor_data *d)
-{
-    int length;
-
-    if (!d->mccp)
-        return TRUE;
-    
-    // Try to write out some data..
-    length = COMPRESS_BUF_SIZE - d->mccp->z->avail_out;
-    if (length > 0) {
-        int nWrite = 0;
-      
-        if ((nWrite = writesocket(d->descriptor, (const char *)d->mccp->buf, UMIN(length, 4096))) < 0) {
-            if (errnosocket == EWOULDBLOCK)
-                nWrite = 0;
-            else
-                return 0;
-        }
-
-        if (nWrite) {
-            if (nWrite == length) {
-                d->mccp->z->next_out = d->mccp->buf;
-                d->mccp->z->avail_out = COMPRESS_BUF_SIZE;
-            } else {
-                memmove(d->mccp->buf, d->mccp->buf + nWrite, (length-nWrite));
-                d->mccp->z->next_out = d->mccp->buf + (length-nWrite);
-                d->mccp->z->avail_out += nWrite;
-            }
-        }
-    }
-
-    return 1;
-}
-
-void
-mccp_start(struct descriptor_data *d, int version)
-{
-    z_stream *s;
-    struct mccp *m;
-    int opt = 0;
-    struct shared_string *termtype;
-
-#ifdef USE_SSL
-    if (d->type == CT_SSL)
-        return; 
-#endif
-   
-    m = (struct mccp *) malloc(sizeof(struct mccp));
-    m->z = NULL;
-    m->buf = NULL;
-    m->version = 0;
-
-    termtype = d->telopt.termtypes->data.packed[0].data.string;
-    
-    /* log_status("MCCP_START(%d)\r\n", d->descriptor); */
-    opt = (termtype != termtype_init_state &&
-            !string_compare(termtype->data, "simplemu"));
-    if (opt)
-        setsockopt(d->descriptor, IPPROTO_TCP, TCP_NODELAY, (char *) &opt, sizeof(opt));
-
-        if (d->type != CT_HTTP) {
-	    if (version == 1)
-                sockwrite(d, "\377\372\125\373\360", 5); /* IAC SB COMPRESS WILL SE (MCCP v1) */
-	    else if (version == 2) 
-                sockwrite(d, "\377\372\126\377\360", 5); /* IAC SB COMPRESS2 IAC SE (MCCP v2) */ //ff fa 56 ff f0
-
-        }
-    if (opt)  {
-        //This is a temporary fix for a bug related to SimpleMU.
-#ifdef WIN32
-        Sleep(20); //20ms
-#else
-        fsync(d->descriptor);
-        usleep(20000); //20ms
-#endif
-    }
-
-
-    s = (z_stream *) malloc(sizeof(z_stream));
-    m->buf = (unsigned char *) malloc(sizeof(unsigned char) * COMPRESS_BUF_SIZE);
-
-    s->next_in = NULL;
-    s->avail_in = 0;
-
-    s->next_out = m->buf;
-    s->avail_out = COMPRESS_BUF_SIZE;
-
-    s->zalloc = NULL;
-    s->zfree  = NULL;
-    s->opaque = NULL;
-
-    if (d->type == CT_HTTP) {
-        deflateInit2(s, Z_DEFAULT_COMPRESSION, Z_DEFLATED, 15+16, 8, Z_DEFAULT_STRATEGY);
-    } else {
-        if (deflateInit(s, 9) != Z_OK) {
-            free((void *)m->buf);
-            free((void *)m);
-            free((void *)s);
-            d->mccp = NULL;
-
-            return;
-        }
-    }
-
-    m->version = version;
-    m->z = s;
-    d->mccp = m;
-
-    DR_RAW_ADD_FLAGS(d, DF_COMPRESS);
-
-    return;
-}
-
-
-void
-mccp_end(struct descriptor_data *d)
-{
-    unsigned char dummy[1];
-
-    /* log_status("MCCP_END(%d)\n", d->descriptor); */
-
-    if (!d->mccp)
-        return;
-
-    d->mccp->z->avail_in = 0;
-    d->mccp->z->next_in = dummy;
-
-    /* Blob says I should handle this differently.  I'll look into it later, since it works currently.  -Hinoserm */
-    if (deflate(d->mccp->z, Z_FINISH) == Z_STREAM_END)
-        mccp_process_compressed(d);
-
-    deflateEnd(d->mccp->z);
-    free((void *)d->mccp->buf);
-    free((void *)d->mccp->z);
-    free((void *)d->mccp);
-
-    d->mccp = NULL;
-
-    DR_RAW_REM_FLAGS(d, DF_COMPRESS);
-
-    return;
-
-}
-
-#endif
-
-
-
-void
-termtypes_init(struct telopt *t)
-{
-    if (!termtype_init_state) {
-        termtype_init_state = alloc_prog_string("<unknown>");
-        /* By not de-incrementing the link count here, termtype_init will always
-         * be a minimum of 1. That's actually makes things simpler. */
-    }
-    if (t->termtypes) {
-        array_free(t->termtypes);
-    }
-    t->termtypes = new_array_packed(1);
-    t->termtypes->data.packed[0].type = PROG_STRING;
-    t->termtypes->data.packed[0].data.string = termtype_init_state;
-    termtype_init_state->links++;
-
-    t->termtypes_cnt = 0;
-}
-
-void
-telopt_init(struct telopt *t)
-{
-
-    t->mccp = 0;
-    t->sb_buf = NULL;
-    t->sb_buf_len = 0;
-    t->width = 0;
-    t->height = 0;
-    t->mtts = 0;
-    t->termtypes = NULL;
-    t->termtypes_cnt = 0;
-
-    termtypes_init(t);
-}
-
-void
-telopt_clean(struct telopt *t)
-{
-    t->mccp = 0;
-    if (t->sb_buf)
-        free((void *)t->sb_buf);
-    t->sb_buf = NULL;
-    t->sb_buf_len = 0;
-    t->width = 0;
-    t->height = 0;
-    t->mtts = 0;
-    t->termtypes_cnt = 0;
-
-    // termtypes may persist in memory if link count >0, this is expected.
-    array_free(t->termtypes);
-    t->termtypes = NULL;
-}
-
-void
-telopt_sb_termtype(struct descriptor_data *d) {
-    char termtype[TELOPT_MAX_BUF_LEN];
-    char *last_termtype;
-    struct inst temp1;
-    struct inst temp2;
-
-    if (d->telopt.sb_buf_len < 2) /* At this point, a valid request would have at least two bytes in it. */
-        return;
-
-    if (d->telopt.sb_buf[1] == 1) {
-        /* 
-           The client requested our termtype.  Send it.
-           It would not be proper to send our version number here.
-        */
-        queue_write(d, "\xFF\xFA\x00ProtoMUCK\xFF\xF0", 14);
-    } else if (!d->telopt.sb_buf[1]) {
-
-        /* Move the data into the termtype string, making sure to add a null at the end. */
-        //memcpy(d->telopt.termtype, d->telopt.sb_buf + 2, d->telopt.sb_buf_len-2);
-        //d->telopt.termtype[d->telopt.sb_buf_len-2] = '\0';
-        if (d->telopt.sb_buf_len >= 3) {
-            memcpy(termtype, d->telopt.sb_buf + 2, d->telopt.sb_buf_len-2);
-            termtype[d->telopt.sb_buf_len-2] = '\0';
-        } else {
-            // Blank termtype.
-            termtype[0] = '\0';
-        }
-
-        if (d->telopt.termtypes_cnt == 0) {
-            /* First seen termtype: the primary, i.e. name of client.
-             * We need to be aware of the fact that this might be a second
-             * attempt to cycle through termtypes, and reset our termtypes
-             * array if that's the case. */
-            if (d->telopt.termtypes->items > 1) {
-                termtypes_init(&d->telopt);
-            }
-
-            d->telopt.termtypes_cnt++;
-        } else {
-            // Check to see if cycling has begun...
-            temp1.type = PROG_INTEGER;
-            temp1.data.number = d->telopt.termtypes_cnt - 1;
-
-            temp2 = *(array_getitem(d->telopt.termtypes, &temp1));
-            last_termtype = temp2.data.string->data;
-
-            //last_termtype = d->termtypes->data.packed[d->termtypes->items].data.string;
-            if ((!*termtype && last_termtype == termtype_init_state->data) ||
-                    (!string_compare(termtype, last_termtype))) {
-                /* String matched last reported termtype. We're done.
-                 * This sets the count back to zero, which prevents us
-                 * from requesting further termtypes and starts us over
-                 * from scratch in the event that the client sends us
-                 * another TERMTYPE unsolicited. */
-                d->telopt.termtypes_cnt = 0;
-            }
-
-
-            if (*termtype && d->telopt.termtypes_cnt == 1) {
-                // Second seen termtype...actual "type".
-                //
-                if (string_prefix(termtype, "DUMB")) {
-                    // ragequit
-                } else if (has_suffix(termtype, "-256COLOR")) {
-                    DR_RAW_ADD_FLAGS(d, DF_COLOR);
-                    DR_RAW_ADD_FLAGS(d, DF_256COLOR);
-                } else if (string_prefix(termtype, "ANSI") ||
-                               string_prefix(termtype, "VT100") ||
-                               string_prefix(termtype, "SCREEN")) {
-                    DR_RAW_ADD_FLAGS(d, DF_COLOR);
-                } else if (string_prefix(termtype, "XTERM")) {
-                    DR_RAW_ADD_FLAGS(d, DF_COLOR);
-                    DR_RAW_ADD_FLAGS(d, DF_256COLOR);
-                }
-                d->telopt.termtypes_cnt++;
-            } else if (*termtype && d->telopt.termtypes_cnt == 2) {
-                // Third termtype...candidate for MTTS.
-                if (string_prefix(termtype, "MTTS ")) {
-                    char *tailptr;
-                    d->telopt.mtts = strtol(termtype+5, &tailptr, 10);
-                    if (*tailptr != '\0') {
-                        // bogus MTTS value, reset it.
-                        d->telopt.mtts = 0;
-                    } else {
-                        /* Got MTTS...detect capabilities.
-                         * 
-                         * Not implemented:
-                         *   2 = VT100
-                         *  16 = Mouse Tracking
-                         *  32 = OSC Color Palette
-                         *  64 = Screen Reader
-                         * 128 = Proxy */
-                        if (d->telopt.mtts & 1) // ANSI COLOR
-                            DR_RAW_ADD_FLAGS(d, DF_COLOR);
-                        if (d->telopt.mtts & 4) // UTF-8
-                            d->encoding = ENC_UTF8;
-                        if (d->telopt.mtts & 8) // 256 COLOR
-                            DR_RAW_ADD_FLAGS(d, DF_256COLOR);
-                    }
-
-                }
-                d->telopt.termtypes_cnt++;
-            } else if (d->telopt.termtypes_cnt != 0) {
-                // No special processing here, just keep going.
-                d->telopt.termtypes_cnt++;
-            }
-        }
-        if (d->telopt.termtypes_cnt) {
-
-            if (d->telopt.termtypes_cnt == 1 && *termtype) {
-                /* We only need to set termtype on first pass if it
-                 * is non-null, termtypes_init handled it otherwise. */
-                temp1.type = PROG_STRING;
-                temp1.data.string = alloc_prog_string(termtype);
-                temp2.type = PROG_INTEGER;
-                temp2.data.number = 0;
-                array_setitem(&d->telopt.termtypes, &temp2, &temp1);
-                CLEAR(&temp1);
-
-                if (!string_compare(termtype, "Pueblo")) {
-                    /* Functionality test, DF_PUEBLO doesn't actually do anything yet */
-                    DR_RAW_ADD_FLAGS(d, DF_PUEBLO);
-                }
-            } else if (d->telopt.termtypes_cnt > 1)  {
-                if (!*termtype) {
-                    temp1.type = PROG_STRING;
-                    temp1.data.string = termtype_init_state;
-                    array_appenditem(&d->telopt.termtypes, &temp1);
-                } else {
-                    temp1.type = PROG_STRING;
-                    temp1.data.string = alloc_prog_string(termtype);
-                    array_appenditem(&d->telopt.termtypes, &temp1);
-                    CLEAR(&temp1);
-                }
-            }
-
-
-            if (!DR_RAW_FLAGS(d, DF_COMPRESS) && d->telopt.termtypes_cnt == 1) {
-#ifdef MCCP_ENABLED
-                /* Due to SimpleMU, we need to determine the termtype before we can enable MCCP. */
-                if (d->telopt.mccp && !d->mccp)
-                    mccp_start(d, d->telopt.mccp);
-#endif
-            }
-
-            /* Request the next: IAC SB TERMTYPE SEND IAC SE */
-            queue_write(d, "\xFF\xFA\x18\x01\xFF\xF0", 6);
-        }
-    }
-}
-
-void
-telopt_sb_charset(struct descriptor_data *d) {
-    char buf2[MAX_COMMAND_LEN];
-    int spos, dpos, accepted_charsets = 0;
-    char sep;
-
-    //log_status("DBUG: (%d) IAC SB CHARSET REQUEST %x %x %s -- len: %d\n",
-    //    d->descriptor,d->telopt.sb_buf[1],d->telopt.sb_buf[2],d->telopt.sb_buf+3,d->telopt.sb_buf_len);
-    if (d->telopt.sb_buf[1] == TELOPT_CHARSET_ACCEPTED) {
-        if (!string_compare((char *)d->telopt.sb_buf + 2, "ISO_8859-1:1987")) {
-            d->encoding = ENC_LATIN1;
-#ifdef UTF8_SUPPORT
-        } else if (!string_compare((char *)d->telopt.sb_buf + 2, "UTF-8")) {
-            d->encoding = ENC_UTF8;
-        } else if (!string_compare((char *)d->telopt.sb_buf + 2, "IBM437")) {
-            d->encoding = ENC_IBM437;
-#endif
-        } else { // US-ASCII or unsolicited.
-            d->encoding = ENC_ASCII;
-        }
-
-    } else if (d->telopt.sb_buf[1] == TELOPT_CHARSET_REQUEST) {
-        if (d->telopt.sb_buf_len < 3) /* Need more than CHARSET REQUEST SEP */
-            return;
-        if (d->telopt.sb_buf[2]) /* store the requested charset delimiter */
-            sep = d->telopt.sb_buf[2];
-        else
-            return;
-        //log_status("DBUG: (%d) CHARSET REQUEST, buffer valid, sep is 0x%x\n",d->descriptor,sep);
-        spos = 3;
-        dpos = 4;
-        strncpy(buf2,"\xFF\xFA\x2A\x02",dpos);  /* IAC SB CHARSET ACCEPTED */
-
-        while (d->telopt.sb_buf[spos]) {
-            while (!(d->telopt.sb_buf[spos]==sep)) {
-                buf2[dpos] = d->telopt.sb_buf[spos];
-                dpos++;
-                spos++;      
-                if (!d->telopt.sb_buf[spos])
-                    return;
-            }
-            /* should now be IAC SB CHARSET ACCEPTED <charset> IAC SE */
-            buf2[dpos] = '\xFF';
-            buf2[dpos+1] = '\xF0';
-            buf2[dpos+2] = '\0';
-            dpos++;
-            dpos++;
-            //log_status("DBUG: (%d) Found charset, created buffer %s\n",d->descriptor,buf2);
-            if (strcasestr2(buf2, "US-ASCII") || strcasestr2(buf2, "us") ||
-                    strcasestr2(buf2, "ANSI_X3.4-1968")) {
-                d->encoding = ENC_ASCII;
-                accepted_charsets = 1;
-            } else if (strcasestr2(buf2, "UTF-8")) {
-                d->encoding = ENC_UTF8;
-                accepted_charsets = 1;
-            } else if (strcasestr2(buf2, "ISO-8859-1") ||
-                    strcasestr2(buf2, "ISO_8859-1:1987") ||
-                    strcasestr2(buf2, "latin1")) {
-                d->encoding = ENC_LATIN1;
-                accepted_charsets = 1;
-            } else if (strcasestr2(buf2, "IBM437") ||
-                    strcasestr2(buf2, "cp437")) {
-                d->encoding = ENC_IBM437;
-                accepted_charsets = 1;
-            }
-            queue_write(d, buf2, dpos+1);
-            //log_status("DBUG: (%d) IAC SB CHARSET ACCEPTED %s IAC SE, accepted: %d\n",
-            //    d->descriptor,buf2,accepted_charsets);
-            spos++;
-            dpos = 4; // Reuse this buffer  
-        }
-        if (!accepted_charsets) {
-            /* IAC SB CHARSET REJECTED IAC SE */
-            queue_write(d, "\xFF\xFA\x2A\x03\xFF\xF0", 6);
-            //log_status("DBUG: (%d) IAC SB CHARSET REJECTED IAC SE, accepted: %d\n",
-            //    d->descriptor,accepted_charsets);
-        }
-        return;
-    } else {
-        // REJECTED or unsolicited...possibly do things here later.
-    }
-}
-
-void
-charset_send(struct descriptor_data *d)
-{
-    queue_write(d, "\xFF\xFA\x2A\x01\x20", 5); // IAC SB CHARSET REQUEST SEPERATOR:" "
-#ifdef UTF8_SUPPORT
-    queue_write(d, "UTF-8 ", 6);
-    queue_write(d, "IBM437 ", 7);
-#endif
-    queue_write(d, "ISO_8859-1:1987 ", 16); // Latin1
-    queue_write(d, "US-ASCII", 8);
-
-    queue_write(d, "\xFF\xF0", 2);
-}
-
-void
-mssp_send(struct descriptor_data *d)
-{
-    char buf[BUFFER_LEN];
-    char mssp_var[BUFFER_LEN];
-    char mssp_val[BUFFER_LEN];
-    char propname[BUFFER_LEN];
-    char *p;
-    PropPtr propadr, pptr;
-    PropPtr prptr;
-
-    const char *dir = "/~mssp";
-    const dbref ref = (dbref)0;
-
-    int sent_name = 0;
-    int sent_players = 0;
-    int sent_uptime = 0;
-    int sent_hostname = 0;
-    int sent_port = 0;
-    int sent_codebase = 0;
-    int sent_family = 0;
-
-    queue_write(d, "\xFF\xFA\x46", 3);
-
-    propadr = first_prop(ref, dir, &pptr, propname);
-    while (propadr) {
-        strcpy(mssp_var, propname);
-        sprintf(buf, "%s%c%s", dir, PROPDIR_DELIMITER, propname);
-        prptr = get_property(ref, buf);
-        if (prptr) {
-#ifdef DISKBASE
-            propfetch(ref, prptr);
-#endif
-            switch (PropType(prptr)) {
-                case PROP_STRTYP:
-                    strcpy(mssp_val, PropDataUNCStr(prptr));
-                    break;
-                case PROP_INTTYP:
-                    sprintf(mssp_val, "%d", PropDataVal(prptr));
-                    break;
-                case PROP_FLTTYP:
-                    sprintf(mssp_val, "%#.15g", PropDataFVal(prptr));
-                    break;
-                default:
-                    mssp_val[0] = '\0';
-                    break;
-            }
-        }
-        propadr = next_prop(pptr, propadr, propname);
-
-        for (p = mssp_var; *p; p++)
-            *p = UPCASE(*p);
-
-        if (*mssp_var && *mssp_val) {
-            if (!strcmp("NAME", mssp_var))
-                sent_name = 1;
-            else if (!strcmp("PLAYERS", mssp_var))
-                sent_players = 1;
-            else if (!strcmp("UPTIME", mssp_var))
-                sent_uptime = 1;
-            else if (!strcmp("HOSTNAME", mssp_var))
-                sent_hostname = 1;
-            else if (!strcmp("PORT", mssp_var))
-                sent_port = 1;
-            else if (!strcmp("CODEBASE", mssp_var))
-                sent_codebase = 1;
-            else if (!strcmp("FAMILY", mssp_var))
-                sent_family = 1;
-
-            sprintf(buf, "\x01%s\x02%s", mssp_var, mssp_val);
-            queue_write(d, buf, strlen(buf));
-        }
-    }
-
-    if (!sent_name) {
-        sprintf(buf, "\x01%s\x02%s", "NAME", tp_muckname);
-        queue_write(d, buf, strlen(buf));
-    }
-
-    if (!sent_players) {
-        sprintf(buf, "\x01%s\x02%d", "PLAYERS", pcount());
-        queue_write(d, buf, strlen(buf));
-    }
-
-    if (!sent_uptime) {
-        sprintf(buf, "\x01%s\x02%d", "UPTIME", (int)startup_systime);
-        queue_write(d, buf, strlen(buf));
-    }
-
-    // Sending localhost (the default) is pointless.
-    if (!sent_hostname && strcmp("localhost", tp_servername)) {
-        sprintf(buf, "\x01%s\x02%s", "HOSTNAME", tp_servername);
-        queue_write(d, buf, strlen(buf));
-    }
-
-    if (!sent_port) {
-        sprintf(buf, "\x01%s\x02%d", "PORT", tp_textport);
-        queue_write(d, buf, strlen(buf));
-    }
-
-    if (!sent_codebase) {
-        sprintf(buf, "\x01%s\x02%s", "CODEBASE", "ZetaMUCK");
-        queue_write(d, buf, strlen(buf));
-    }
-
-    if (!sent_family) {
-        sprintf(buf, "\x01%s\x02%s", "FAMILY", "TinyMUD");
-        queue_write(d, buf, strlen(buf));
-    }
-
-    // The reported protocols cannot be overwridden by props on #0.
-
-    sprintf(buf, "\x01%s\x02%d", "ANSI", 1);
-    queue_write(d, buf, strlen(buf));
-
-    sprintf(buf, "\x01%s\x02%d", "GMCP", 0);
-    queue_write(d, buf, strlen(buf));
-
-#ifdef MCCP_ENABLED
-    sprintf(buf, "\x01%s\x02%d", "MCCP", 1);  
-#else
-    sprintf(buf, "\x01%s\x02%d", "MCCP", 0);
-#endif
-    queue_write(d, buf, strlen(buf));
-
-    // send 0 for now, until MCP code is re-audited
-    sprintf(buf, "\x01%s\x02%d", "MCP", 0);
-    queue_write(d, buf, strlen(buf));
-
-    sprintf(buf, "\x01%s\x02%d", "MSDP", 0);
-    queue_write(d, buf, strlen(buf));
-
-    sprintf(buf, "\x01%s\x02%d", "MSP", 0);
-    queue_write(d, buf, strlen(buf));
-
-    sprintf(buf, "\x01%s\x02%d", "MXP", 0);
-    queue_write(d, buf, strlen(buf));
-
-    sprintf(buf, "\x01%s\x02%d", "PUEBLO", 1);
-    queue_write(d, buf, strlen(buf));
-
-    // send 0 for now, until re-implemented
-    sprintf(buf, "\x01%s\x02%d", "UTF-8", 0);
-    queue_write(d, buf, strlen(buf));
-
-    sprintf(buf, "\x01%s\x02%d", "VT100", 0);
-    queue_write(d, buf, strlen(buf));
-
-    sprintf(buf, "\x01%s\x02%d", "XTERM 256 COLORS", 1);
-    queue_write(d, buf, strlen(buf));
-
-
-    queue_write(d, "\xFF\xF0", 2);
-}
 
 #ifdef MODULAR_SUPPORT
 
@@ -7864,6 +7204,6 @@ module_free(struct module *m)
 #endif
 
 int printfdbg(int rarg) {
-    assert(rarg > -1 && "glibc bug tripped: operation would truncate a multi-byte sequence!" && rarg);
+    assert(rarg > -1 && "glibc bug tripped: operation would truncate a multi-byte sequence!");
     return rarg;
 }

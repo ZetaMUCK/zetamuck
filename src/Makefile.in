@@ -88,7 +88,8 @@ CSRC= array.c boolexp.c cgi.c compile.c compress.c create.c db.c  \
       sanity.c newhttp.c version.c sha1.c json.c
 
 MSRC= olddecomp.c reconst.c interface.c
-SRC= ${MISCSRC} ${CSRC} ${MSRC}
+TSRC= telnet/telnet.c telnet/charset.c telnet/mccp.c telnet/mssp.c telnet/termtype.c
+SRC= ${MISCSRC} ${CSRC} ${TSRC} ${MSRC}
 
 COBJ=  array.o boolexp.o cgi.o compile.o compress.o create.o db.o  \
 	debugger.o disassem.o diskprop.o edit.o events.o game.o hashtab.o  \
@@ -107,28 +108,31 @@ LOBJ= copyright.o
 MOBJ= olddecomp.o reconst.o interface.o resolver.o topwords.o 
 EOBJ= oldcompress.o diskprop.o property.o propdirs.o props.o stringutil.o \
 	unparse.o utils.o predicates.o db.o boolexp.o log.o
-
-OBJ= ${COBJ} ${ROBJ} ${MOBJ}
+TOBJ= telnet/telnet.o telnet/charset.o telnet/mccp.o telnet/mssp.o telnet/termtype.o
+OBJ= ${COBJ} ${ROBJ} ${TOBJ} ${MOBJ}
 TARGETS= protomuck resolver
 
 .SUFFIXES: .c .o
 
-.c.o:
-	${PRE} ${CC} ${CFLAGS} -c $*.c
+#.c.o:
+#	${PRE} ${CC} ${CFLAGS} -c $*.c
+
+$(BUILDDIR)/%.o: %.c
+	${PRE} ${CC} ${CFLAGS} $< -o $@
 
 all:    ${TARGETS}
 
 muck:	protomuck
 
-protomuck:        ${P} ${COBJ} interface.o
+protomuck:        ${P} ${COBJ} ${TOBJ} interface.o
 	@if [ -r protomuck ]; then ${MV} protomuck protomuck~; fi
 	@echo "`bash -c set | grep OSTYPE`"
 	@if [ "`bash -c set | grep OSTYPE`" = "OSTYPE=cygwin" ]; then \
-         echo ${PRE} ${CC} -Wl,--heap,268435456,--stack,16777216 ${CFLAGS} -o protomuck ${COBJ} interface.o ${LIBR}; \
-	 ${PRE} ${CC} -Wl,--heap,268435456,--stack,16777216 ${XXCFLAGS} -o protomuck ${COBJ} interface.o ${LIBR}; \
+         echo ${PRE} ${CC} -Wl,--heap,268435456,--stack,16777216 ${CFLAGS} -o protomuck ${COBJ} ${TOBJ} interface.o ${LIBR}; \
+	 ${PRE} ${CC} -Wl,--heap,268435456,--stack,16777216 ${XXCFLAGS} -o protomuck ${COBJ} ${TOBJ} interface.o ${LIBR}; \
 	else \
-         echo ${PRE} ${CC} ${CFLAGS} -o protomuck ${COBJ} interface.o ${LIBR}; \
-	 ${PRE} ${CC} ${CFLAGS} -o protomuck ${COBJ} interface.o ${LIBR}; \
+         echo ${PRE} ${CC} ${CFLAGS} -o protomuck ${COBJ} ${TOBJ} interface.o ${LIBR}; \
+	 ${PRE} ${CC} ${CFLAGS} -o protomuck ${COBJ} ${TOBJ} interface.o ${LIBR}; \
 	fi
 
 resolver:	resolver.o

@@ -496,6 +496,9 @@ unsigned char utf8_sbc_remap(int enc, wchar_t codepoint) {
         case 0x2208:           // ∈ -> E,€,Є
         case 0x20ac:           // € -> E,€,Є
             return CHARMAP('E',128,238);
+    // Misc customization.
+        case 0x309c:           // ゜-> o,°,º
+            return CHARMAP('o',176,248);
     }
 
     return 0;
