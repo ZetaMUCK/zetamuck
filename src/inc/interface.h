@@ -8,6 +8,13 @@
 # include "mcp.h"
 #endif
 
+#ifdef UTF8_SUPPORT
+# include <locale.h>
+# include <wchar.h>
+# include <wctype.h>
+# include <iconv.h>
+#endif
+
 #ifdef USE_SSL
 # if defined (HAVE_OPENSSL_SSL_H)
 #  include <openssl/ssl.h>
@@ -20,45 +27,19 @@
 # endif
 #endif
 
+extern int printfdbg(int rarg);
+#define printf(...) (printfdbg(printf(__VA_ARGS__)))
+#define fprintf(...) (printfdbg(fprintf(__VA_ARGS__)))
+#define sprintf(...) (printfdbg(sprintf(__VA_ARGS__)))
+#define snprintf(...) (printfdbg(snprintf(__VA_ARGS__)))
+
 #define STRINGIFY(s) _STRINGIFY(s)
 #define _STRINGIFY(s) #s
 
 #define SSL_CERT_FILE "data/server.pem"
 #define SSL_KEY_FILE "data/server.pem"
 
-#define TELOPT_MAX_BUF_LEN 1024
-
-#define TELOPT_IAC      '\xFF'
-
-#define TELOPT_DO       '\xFD'
-#define TELOPT_DONT     '\xFE'
-
-#define TELOPT_WILL     '\xFB'
-#define TELOPT_WONT     '\xFC'
-
-#define TELOPT_SB       '\xFA'
-#define TELOPT_SE       '\xF0'
-
-#define TELOPT_TERMTYPE '\x18'
-#define TELOPT_NAWS     '\x1F'
-#define TELOPT_MCCP1    '\x55'
-#define TELOPT_MCCP2    '\x56'
-
-#define TELOPT_MSSP     '\x46'
-#define TELOPT_MSSP_VAR '\x01'
-#define TELOPT_MSSP_VAL '\x02'
-#define TELOPT_CHARSET  '\x2A'
-
-#define TELOPT_BRK      '\xF3'
-#define TELOPT_IP       '\xF4'
-
-#define TELOPT_EC       '\xF7'
-#define TELOPT_EL       '\xF8'
-
-#define TELOPT_NOP      '\xF1'
-#define TELOPT_AO       '\xF5'
-#define TELOPT_AYT      '\xF6'
-
+// Boot handling
 #define BOOT_DROP       1 /* the most common case, server choosing to
                              disconnect client */
 #define BOOT_QUIT       2 /* player QUIT command */
@@ -67,19 +48,54 @@
                              d->booted. */
 #define BOOT_SAFE       4 /* disconnect when the descriptor has no tasks or output queued */
 
-#define ENC_RAW         0
-#define ENC_ASCII       1
-#define ENC_LATIN1      2 /* not actually used yet */
-#define ENC_UTF8        3 /* must be highest, per our telopt processing */
+// Encoding types
+#define ENC_RAW         0 // Default for CT_MUF. Proto's old default for players. (never again)
+#define ENC_ASCII       1 // Default for players, if @tune ascii_descrs is set.
+#define ENC_LATIN1      2 // Default for CT_HTTP. Players default to it without @tune ascii_descrs.
+#define ENC_IBM437      3 // Never a default. Negotiated or set manually.
+#define ENC_UTF8        4 // Never a default. Negotiated or set manually.
 
-#define SOCKOPT_NOQUEUE      0
-#define SOCKOPT_SIMPLEQUEUE  1
-#define SOCKOPT_TELNETQUEUE  2
-#define SOCKOPT_RAWMODE      3
-#define SOCKOPT_HOMEINSTANCE 5
 
-#ifdef MCCP_ENABLED
-#define COMPRESS_BUF_SIZE 16384 /* This will use 16k for every descriptor that has MCCP enabled */
+/* Unicode noncharacters. These function as internal escapes inside of character
+ * arrays, and should not be accepted from descriptor or file input. They can
+ * be sent to a descriptor with queue writing functions, but will  Do _not_
+ * confuse these characters in the Private Use Space.
+ *
+ * The contiguous noncharacters stop at 0xFDEF. 0xFDF0 is a real character.
+ *
+ * Code points above 0xFFFF occupy 4 bytes instead of 3. Avoid using them until
+ * the first 34 noncharacters are exhausted.
+ *
+ * When in doubt, consult the FAQ: http://www.unicode.org/faq/private_use.html
+ */
+
+#define NC_UCNSTART  0xFDD0 /* queue_string: begin UCN escaping for code points
+                                             that cannot be rendered in the
+                                             target descriptor's encoding. */
+#define NC_UCNSTOP   0xFDD1 /* queue_string: stop UCN escaping */
+#define NC_MXPLINE   0xFDD2 /* MXP: Sent prior to a line that should only be
+                                    seen by MXP clients. Allows the entire line
+                                    to be dropped without further processing. */
+#define NC_MXPOPEN   0xFDD3 /* MXP: open HTML tag. render as < for DF_MXP, else
+                                    discard all characters until NC_MXPCLOSE */
+#define NC_MXPCLOSE  0xFDD4 /* MXP: close HTML tag. render as > for DF_MXP, else
+                                    close the NC_MXPOPEN discard sequence */
+#define NC_MXPAMP    0xFDD5 /* MXP: Unescaped HTML entity: & */
+#define NC_MXPQUOT   0xFDD6 /* MXP: Unescaped HTML entity: " */
+
+
+#define NC_UCNSTART_UTF8 "\xEF\xB7\x90"
+#define NC_UCNSTOP_UTF8  "\xEF\xB7\x91"
+#define NC_MXPLINE_UTF8  "\xEF\xB7\x92"
+#define NC_MXPOPEN_UTF8  "\xEF\xB7\x93"
+#define NC_MXPCLOSE_UTF8 "\xEF\xB7\x94"
+#define NC_MXPAMP_UTF8   "\xEF\xB7\x95"
+#define NC_MXPQUOT_UTF8  "\xEF\xB7\x96"
+
+#ifdef UTF8_SUPPORT
+# define UCNESCAPED NC_UCNSTART_UTF8
+#else
+# define UCNESCAPED ""
 #endif
 
 /* structures */
@@ -219,6 +235,8 @@ struct descriptor_data {
     dbref                    mufprog;       /* If it is one of the MUF-type ports, then this points to the program. -- UNIMPLEMENTED */
     struct descriptor_data  *next;          /* Next descriptor information */
     struct descriptor_data **prev;          /* Previous descriptor information */
+    struct telopt            telopt;
+    int                      bsescape;      /* backslash escape state within d->raw_input */
 #ifdef USE_SSL
     SSL			    *ssl_session;
 #endif
@@ -234,7 +252,10 @@ struct descriptor_data {
 #ifdef MCCP_ENABLED
     struct mccp             *mccp;
 #endif
-    struct telopt            telopt;
+#ifdef UTF8_SUPPORT
+    iconv_t                  iconv_in;      /* iconv conversion state */
+#endif
+
 };
 
 #define DF_HTML           0x1 /* Connected to the internal WEB server.
@@ -265,7 +286,7 @@ struct descriptor_data {
                                  MCCP-enabled -hinoserm */
 #define DF_MXP         0x1000 /* Client supports MUD eXtension Protocol
                                  -- UNIMPLEMENTED */
-#define DF_MSP         0x2000 /* Client supports MUD Sount Protocol
+#define DF_MSP         0x2000 /* Client supports MUD Sound Protocol
                                  -- UNIMPLEMENTED */
 #define DF_IPV6       0x10000 /* Client is connected using IPv6. */
 #define DF_256COLOR   0x20000 /* This descriptor is accepting 256 color */
@@ -320,6 +341,8 @@ struct descriptor_data {
 
 
 extern int maxd;
+extern time_t current_systime;
+extern time_t startup_systime;
 extern char restart_message[BUFFER_LEN];
 extern char shutdown_message[BUFFER_LEN];
 extern bool db_conversion_flag;
@@ -330,8 +353,9 @@ extern bool verboseload;
 extern unsigned int bytesIn;
 extern unsigned int bytesOut;
 extern unsigned int commandTotal;
+extern struct shared_string *termtype_init_state;
+
 extern void shutdownsock(struct descriptor_data *d);
-extern void telopt_advertise(struct descriptor_data *d);
 extern struct descriptor_data * initializesock(int s, struct huinfo *hu, int ctyp, int cport, int welcome);
 extern struct descriptor_data* descrdata_by_index(int index);
 extern struct descriptor_data* descrdata_by_descr(int i);
@@ -343,8 +367,10 @@ extern void notify_descriptor_char(int d, char c);
 extern void anotify_descriptor(int descr, const char *msg);
 extern int anotify(dbref player, const char *msg);
 extern int notify_html(dbref player, const char *msg);
+extern int sockwrite(struct descriptor_data *d, const char *str, int len);
 extern void add_to_queue(struct text_queue *q, const char *b, int len, int wclen); /* hinoserm */
 extern int queue_write(struct descriptor_data *d, const char *b, int n);  /* hinoserm */
+extern int queue_ansi(struct descriptor_data *d, const char *msg);
 extern int queue_string(struct descriptor_data *d, const char *s);
 extern int notify_nolisten(dbref player, const char *msg, int isprivate);
 extern int anotify_nolisten2(dbref player, const char *msg);
@@ -391,6 +417,7 @@ extern char *pipnum(int c);
 extern char *pport(int c);
 extern void make_nonblocking(int s);
 extern void make_blocking(int s);
+extern int save_command(struct descriptor_data *d, char *command, int len, int wclen);
 extern char *time_format_2(time_t dt);
 extern int msec_diff(struct timeval now, struct timeval then);
 extern void pboot(int c);

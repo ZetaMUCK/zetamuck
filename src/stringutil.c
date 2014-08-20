@@ -6,6 +6,9 @@
 #include "params.h"
 #include "interface.h"
 #include "interp.h"
+#ifdef UTF8_SUPPORT
+#include "iconv.h"
+#endif
 
 /* String utilities */
 
@@ -15,6 +18,519 @@
 
 /* Hash table of color names->numeric color index lookup */
 static hash_tab color_list[COLOR_HASH_SIZE];
+
+#define CHARMAP(x,y,z) (enc == ENC_ASCII ? x : \
+                        (enc == ENC_LATIN1 ? y : \
+                         (enc == ENC_IBM437 ? z : 0 )))
+#define LATIN1MAP(x,y) case x: return CHARMAP(y,x,y);
+#define UTF8_START(x) utf8_hex[(unsigned char)*x]
+#define UTF8_CONT2(x) utf8_hex[(unsigned char)*(x + 1)]
+#define UTF8_CONT3(x) utf8_hex[(unsigned char)*(x + 1)] + utf8_hex[(unsigned char)*(x + 2)]
+#define UTF8_CONT4(x) utf8_hex[(unsigned char)*(x + 1)] + utf8_hex[(unsigned char)*(x + 2)] + \
+                      utf8_hex[(unsigned char)*(x + 3)]
+
+unsigned char utf8_sbc_remap(int enc, wchar_t codepoint) {
+    /*
+    if ((unsigned char)*in >= 0xF0 && maxbytes >= 4) {
+        codepoint = UTF8_START(in) + UTF8_CONT4(in);
+    } else if ((unsigned char)*in >= 0xE0 && maxbytes >= 3) {
+        codepoint = UTF8_START(in) + UTF8_CONT3(in);
+    } else if ((unsigned char)*in >= 0xC2 && maxbytes >= 2) {
+        codepoint = UTF8_START(in) + UTF8_CONT2(in);
+    }  else {
+        return 0;
+    }
+    */
+
+    switch (codepoint) {
+    // Normalize quoting
+        case 0x0018:           // ‘
+        case 0x0019:           // ’
+            return '\'';
+        case 0x001C:           // “
+        case 0x001D:           // ”
+            return '"';
+    // Evil hyphens
+        case 0x2010:           // ‑
+        case 0x2011:           // -, nonbreaking variant of 0x2010
+        case 0x2012:           // ‒
+        case 0x2013:           // –
+        case 0x2014:           // —
+        case 0x2015:           // ―
+        case 0x207b:           // ⁻
+        case 0x208b:           // ₋
+        case 0x2212:           // −
+        case 0xfe58:           // ﹘
+        case 0xfe63:           // ﹣
+        case 0xff0d:           // －
+            return '-';
+    // Evil tildes
+        case 0x2016:           // ⁓
+            return '~';
+    // FANSI defined mappings
+        case 0x263a:           // ☺ -> o,Ò,☺
+            return CHARMAP('o',210,1);
+        case 0x2665:           // ♥ -> V,V,♥
+            return CHARMAP('V','V',3);
+        case 0x2666:           // ♦ -> x,×,♦
+            return CHARMAP('x',215,4);
+        /* FANSI ERRATA: Inconsistent logic for IBM437->Latin1 mapping.
+         *               Using ASCII map instead. */
+        case 0x2663:           // ♣ -> +,+,♣
+            return CHARMAP('+','+',5);
+        case 0x2660:           // ♠ -> %,þ,♠
+            return CHARMAP('%',254,6);
+        case 0x266b:           // ♫ -> /,/,♫
+            return CHARMAP('/','/',14);
+        case 0x263c:           // ☼ -> O,¤,☼
+            return CHARMAP('O',164,15);
+        case 0x25ba:           // ► -> >,>,►
+            return CHARMAP('>','>',16);
+        case 0x25c4:           // ◄ -> <,<,◄
+            return CHARMAP('<','<',17);
+        case 0x2195:           // ↕ -> |,|,↕
+            return CHARMAP('|','|',18);
+        case 0x203c:           // ‼ -> !,¡,‼
+            return CHARMAP('!',161,19);
+        case 0x00b6:           // ¶ -> |,¶,¶
+            return CHARMAP('|',182,20);
+        case 0x00a7:           // § -> $,§,§
+            return CHARMAP('$',167,21);
+        case 0x2017:           // ‗ -> _,–,‗
+            return CHARMAP('_',150,22);
+        case 0x21a8:           // ↨ -> |,|,↨
+            return CHARMAP('|','|',23);
+        case 0x2191:           // ↑ -> ^,^,↑
+            return CHARMAP('^','^',24);
+        case 0x2193:           // ↓ -> v,v,↓
+            return CHARMAP('v','v',25);
+        case 0x2192:           // → -> >,>,→
+            return CHARMAP('>','>',26);
+        case 0x221f:           // ∟ -> _,_,∟
+            return CHARMAP('_','_',28);
+        case 0x2194:           // ↔ -> -,-,↔
+            return CHARMAP('-','-',29);
+        case 0x25b2:           // ▲ -> ^,^,▲
+            return CHARMAP('^','^',30);
+        case 0x25bc:           // ▼ -> v,v,▼
+            return CHARMAP('v','v',31);
+        /* FANSI ERRATA: FANSI recommends Latin1 127, which is a control code.
+         *               Use ASCII map instead. */
+        case 0x2302:           // ⌂ -> ^,^,⌂
+            return CHARMAP('^','^',127);
+        case 0x00c7:           // Ç -> C,Ç,Ç
+            return CHARMAP('C',199,128);
+        case 0x00fc:           // ü -> u,ü,ü
+            return CHARMAP('u',252,129);
+        case 0x00e9:           // é -> e,é,é
+            return CHARMAP('e',233,130);
+        case 0x00e2:           // â -> a,â,â
+            return CHARMAP('a',226,131);
+        case 0x00e4:           // ä -> a,ä,ä
+            return CHARMAP('a',228,132);
+        case 0x00e0:           // à -> a,à,à
+            return CHARMAP('a',224,133);
+        case 0x00e5:           // å -> a,å,å
+            return CHARMAP('a',229,134);
+        case 0x00e7:           // ç -> c,ç,ç
+            return CHARMAP('c',231,135);
+        case 0x00ea:           // ê -> e,ê,ê
+            return CHARMAP('e',234,136);
+        case 0x00eb:           // ë -> e,ë,ë
+            return CHARMAP('e',235,137);
+        case 0x00e8:           // è -> e,è,è
+            return CHARMAP('e',232,138);
+        case 0x00ef:           // ï -> i,ï,ï
+            return CHARMAP('i',239,139);
+        case 0x00ee:           // î -> i,î,î
+            return CHARMAP('i',238,140);
+        case 0x00ec:           // ì -> i,ì,ì
+            return CHARMAP('i',236,141);
+        case 0x00c4:           // Ä -> a,Ä,Ä
+            return CHARMAP('a',196,142);
+        case 0x00c5:           // Å -> A,Å,Å
+            return CHARMAP('A',197,143);
+        case 0x00c9:           // É -> E,É,É
+            return CHARMAP('E',201,144);
+        case 0x00e6:           // æ -> a,æ,æ
+            return CHARMAP('a',230,145);
+        case 0x00c6:           // Æ -> A,Æ,Æ
+            return CHARMAP('A',198,146);
+        case 0x00f4:           // ô -> o,ô,ô
+            return CHARMAP('o',244,147);
+        case 0x00f6:           // ö -> o,ö,ö
+            return CHARMAP('o',246,148);
+        case 0x00f2:           // ò -> o,ò,ò
+            return CHARMAP('o',242,149);
+        case 0x00fb:           // û -> u,û,û
+            return CHARMAP('u',251,150);
+        case 0x00f9:           // ù -> u,ù,ù
+            return CHARMAP('u',249,151);
+        /* FANSI ERRATA: Recommended IBM437-> Latin1 conversion is 'y', but this
+         *               can be sent as IAC+IAC instead. */
+        case 0x00ff:           // ÿ -> y,ÿ,ÿ
+            return CHARMAP('y',255,152); // 255 must be sent as IAC+IAC
+        case 0x00d6:           // Ö -> O,Ö,Ö
+            return CHARMAP('O',214,153);
+        case 0x00dc:           // Ü -> U,Ü,Ü
+            return CHARMAP('U',220,154);
+        case 0x00a2:           // ¢ -> c,¢,¢
+            return CHARMAP('c',162,155);
+        case 0x00a3:           // £ -> L,£,£
+            return CHARMAP('L',163,156);
+        case 0x00a5:           // ¥ -> Y,¥,¥
+            return CHARMAP('Y',165,157);
+        case 0x20a7:           // ₧ -> P,P,₧
+            return CHARMAP('P','P',158);
+        case 0x0192:           // ƒ -> f,ƒ,ƒ
+            return CHARMAP('f',131,159);
+        case 0x00e1:           // á -> a,á,á
+            return CHARMAP('a',225,160);
+        case 0x00ed:           // í -> i,í,í
+            return CHARMAP('i',237,161);
+        case 0x00f3:           // ó -> o,ó,ó
+            return CHARMAP('o',243,162);
+        case 0x00fa:           // ú -> u,ú,ú
+            return CHARMAP('u',250,163);
+        case 0x00f1:           // ñ -> n,ñ,ñ
+            return CHARMAP('n',241,164);
+        case 0x00d1:           // Ñ -> N,Ñ,Ñ
+            return CHARMAP('N',209,165);
+        case 0x00aa:           // ª -> a,ª,ª
+            return CHARMAP('a',170,166);
+        case 0x00ba:           // º -> o,º,º
+            return CHARMAP('o',186,167);
+        case 0x00bf:           // ¿ -> ?,¿,¿
+            return CHARMAP('?',191,168);
+        /* FANSI ERRATA: Conversion tables list IBM437 entity ¬ twice. 
+         *               The decimal value is correct. */
+        case 0x2310:           // ⌐ -> _,_,⌐
+            return CHARMAP('_','_',169);
+        case 0x00ac:           // ¬ -> _,¬,¬
+            return CHARMAP('_',172,170);
+        case 0x00bd:           // ½ -> %,½,½
+            return CHARMAP('%',189,171);
+        case 0x00bc:           // ¼ -> %,¼,¼
+            return CHARMAP('%',188,172);
+        case 0x00a1:           // ¡ -> !,¡,¡
+            return CHARMAP('!',161,173);
+        case 0x00ab:           // « -> <,«,«
+            return CHARMAP('<',171,174);
+        case 0x00bb:           // » -> >,»,»
+            return CHARMAP('>',187,175);
+        case 0x2591:           // ░ -> %,%,░
+            return CHARMAP('%',41,176);
+        case 0x2592:           // ▒ -> #,#,▒
+            return CHARMAP('#','#',177);
+        case 0x2593:           // ▓ -> @,@,▓
+            return CHARMAP('@','@',178);
+        case 0x2502:           // │ -> |,|,│
+            return CHARMAP('|','|',179);
+        case 0x2524:           // ┤ -> |,|,┤
+            return CHARMAP('|','|',180);
+        case 0x2561:           // ╡ -> |,|,╡
+            return CHARMAP('|','|',181);
+        case 0x2562:           // ╢ -> |,|,╢
+            return CHARMAP('|','|',182);
+        case 0x2556:           // ╖ -> n,+,╖
+            return CHARMAP('n',43,183);
+        case 0x2555:           // ╕ -> =,=,╕
+            return CHARMAP('=','=',184);
+        case 0x2563:           // ╣ -> |,|,╣
+            return CHARMAP('|','|',185);
+        case 0x2551:           // ║ -> |,|,║
+            return CHARMAP('|','|',186);
+        case 0x2557:           // ╗ -> =,=,╗
+            return CHARMAP('=','=',187);
+        case 0x255d:           // ╝ -> =,=,╝
+            return CHARMAP('=','=',188);
+        case 0x255c:           // ╜ -> |,|,╜
+            return CHARMAP('|','|',189);
+        case 0x255b:           // ╛ -> |,|,╛
+            return CHARMAP('|','|',190);
+        case 0x2510:           // ┐ -> -,¬,┐
+            return CHARMAP('-',172,191);
+        case 0x2514:           // └ -> |,|,└
+            return CHARMAP('|','|',192);
+        case 0x2534:           // ┴ -> =,=,┴
+            return CHARMAP('=','=',193);
+        case 0x252c:           // ┬ -> =,=,┬
+            return CHARMAP('=','=',194);
+        case 0x251c:           // ├ -> |,|,├
+            return CHARMAP('|','|',195);
+        case 0x2500:           // ─ -> -,—,─
+            return CHARMAP('-',151,196);
+        case 0x253c:           // ┼ -> +,+,┼
+            return CHARMAP('+','+',197);
+        case 0x255e:           // ╞ -> |,|,╞
+            return CHARMAP('|','|',198);
+        case 0x255f:           // ╟ -> |,|,╟
+            return CHARMAP('|','|',199);
+        case 0x255a:           // ╚ -> =,=,╚
+            return CHARMAP('=','=',200);
+        case 0x2554:           // ╔ -> =,=,╔
+            return CHARMAP('=','=',201);
+        case 0x2569:           // ╩ -> =,=,╩
+            return CHARMAP('=','=',202);
+        case 0x2566:           // ╦ -> =,=,╦
+            return CHARMAP('=','=',203);
+        case 0x2560:           // ╠ -> =,=,╠
+            return CHARMAP('=','=',204);
+        case 0x2550:           // ═ -> =,=,═
+            return CHARMAP('=','=',205);
+        case 0x256c:           // ╬ -> +,+,╬
+            return CHARMAP('+','+',206);
+        case 0x2567:           // ╧ -> =,=,╧
+            return CHARMAP('=','=',207);
+        case 0x2568:           // ╨ -> |,|,╨
+            return CHARMAP('|','|',208);
+        case 0x2564:           // ╤ -> =,=,╤
+            return CHARMAP('=','=',209);
+        case 0x2565:           // ╥ -> -,-,╥
+            return CHARMAP('-','-',210);
+        case 0x2559:           // ╙ -> u,u,╙
+            return CHARMAP('u','u',211);
+        case 0x2558:           // ╘ -> =,=,╘
+            return CHARMAP('=','=',212);
+        case 0x2552:           // ╒ -> f,+,╒
+            return CHARMAP('f',43,213);
+        case 0x2553:           // ╓ -> n,n,╓
+            return CHARMAP('n','n',214);
+        case 0x256b:           // ╫ -> |,|,╫
+            return CHARMAP('|','|',215);
+        case 0x256a:           // ╪ -> +,‡,╪
+            return CHARMAP('+',135,216);
+        case 0x2518:           // ┘ -> |,|,┘
+            return CHARMAP('|','|',217);
+        case 0x250c:           // ┌ -> +,+,┌
+            return CHARMAP('+','+',218);
+        case 0x2588:           // █ -> #,#,█
+            return CHARMAP('#','#',219);
+        case 0x2584:           // ▄ -> _,_,▄
+            return CHARMAP('_','_',220);
+        case 0x258c:           // ▌ -> |,|,▌
+            return CHARMAP('|','|',221);
+        case 0x2590:           // ▐ -> |,|,▐
+            return CHARMAP('|','|',222);
+        case 0x2580:           // ▀ -> ~,-,▀
+            return CHARMAP('~',45,223);
+        case 0x03b1:           // α -> a,a,α
+            return CHARMAP('a','a',224);
+        case 0x03b2:           // β -> B,ß,β
+            return CHARMAP('B',223,225);
+        case 0x0393:           // Γ -> r,r,Γ
+            return CHARMAP('r','r',226);
+        case 0x03c0:           // π -> n,¶,π
+            return CHARMAP('n',182,227);
+        case 0x03a3:           // Σ -> E,€,Σ
+            return CHARMAP('E',128,228);
+        /* FANSI ERRATA: Conversion tables list IBM437 entity ð twice.
+         *               Decimal value is correct. */
+        case 0x03c3:           // ð -> o,ð,σ
+            return CHARMAP('o',240,229);
+        case 0x03bc:           // μ -> u,µ,μ
+            return CHARMAP('u',181,230);
+        case 0x03c4:           // τ -> r,r,τ
+            return CHARMAP('r','r',231);
+        case 0x0424:           // Ф -> o,‡,Ф
+            return CHARMAP('o',135,232);
+        case 0x03b8:           // θ -> 0,Ø,θ
+            return CHARMAP('0',216,233);
+        case 0x03a9:           // Ω -> O,O,Ω
+            return CHARMAP('O','O',234);
+        case 0x03b4:           // δ -> o,ð,δ
+            return CHARMAP('o',240,235);
+        case 0x221e:           // ∞ -> 8,œ,∞
+            return CHARMAP('8',156,236);
+        case 0x00f8:           // ø -> o,ø,ø
+            return CHARMAP('o',248,237);
+        case 0x0404:           // Є -> E,€,Є
+            return CHARMAP('E',128,238);
+        case 0x2229:           // ∩ -> n,n,∩
+            return CHARMAP('n','n',239);
+        case 0x2261:           // ≡ -> E,E,≡
+            return CHARMAP('E','E',240);
+        case 0x00b1:           // ± -> +,±,±
+            return CHARMAP('+',177,241);
+        case 0x2265:           // ≥ -> >,»,≥
+            return CHARMAP('>',187,242);
+        case 0x2264:           // ≤ -> <,«,≤
+            return CHARMAP('<',171,243);
+        case 0x2320:           // ⌠ -> |,|,⌠
+            return CHARMAP('|','|',244);
+        case 0x2321:           // ⌡ -> J,|,⌡
+            return CHARMAP('J',124,245);
+        case 0x00f7:           // ÷ -> %,÷,÷
+            return CHARMAP('%',247,246);
+        case 0x2248:           // ≈ -> ~,~,≈
+            return CHARMAP('~','~',247);
+        /* FANSI ERRATA: Conversion tables list IBM437 entity º twice.
+         *               Decimal value is correct. */
+        case 0x00b0:           // ° -> o,°,º
+            return CHARMAP('o',176,248);
+        case 0x2022:           // • -> .,•,•
+            return CHARMAP('.',149,249);
+        case 0x0387:           // · -> .,·,·
+            return CHARMAP('.',183,250);
+        case 0x221a:           // √ -> v,v,√
+            return CHARMAP('v','v',251);
+        case 0x207f:           // ⁿ -> n,n,ⁿ
+            return CHARMAP('n','n',252);
+        case 0x00b2:           // ² -> 2,²,²
+            return CHARMAP('2',178,253);
+        case 0x25a0:           // ■ -> #,•,■
+            return CHARMAP('#',149,254);
+    // ISO-8859-1 entities not covered by FANSI (absent in IBM437)
+        case 0x00a0:           // NBSP -> ,NBSP,NBSP
+            return CHARMAP(0,0x00a0,255); // 255 must be sent as IAC+IAC
+        case 0x00a4:           // ¤ -> O,¤,☼
+            return CHARMAP('O',0x00a4,15);
+        LATIN1MAP(0x00a6,'|'); // ¦ -> |,¦,|
+        LATIN1MAP(0x00a8,'"'); // ¨ -> ",¨,"
+        LATIN1MAP(0x00a9,'c'); // © -> c,©,c
+        LATIN1MAP(0x00ad,0);   // SHY -> ,SHY,
+        LATIN1MAP(0x00ae,'r'); // ® -> r,®,r
+        LATIN1MAP(0x00af,'-'); // ¯ -> -,¯,-
+        LATIN1MAP(0x00b3,'3'); // ³ -> 3,³,3
+        LATIN1MAP(0x00b4,'`'); // ´ -> `,´,`
+        case 0x00b7:           // · -> .,·,·
+            return CHARMAP('.',0x00b7,250);
+        LATIN1MAP(0x00b8,'.'); // ¸ -> .,¸,.
+        LATIN1MAP(0x00b9,'1'); // ¹ -> 1,¹,1
+        LATIN1MAP(0x00be,'%'); // ¾ -> %,¾,%
+        LATIN1MAP(0x00c0,'A'); // À -> A,À,A
+        LATIN1MAP(0x00c1,'A'); // Á -> A,Á,A
+        LATIN1MAP(0x00c2,'A'); // Â -> A,Â,A
+        LATIN1MAP(0x00c3,'A'); // Ã -> A,Ã,A
+        LATIN1MAP(0x00c8,'E'); // È -> E,È,E
+        LATIN1MAP(0x00ca,'E'); // Ê -> E,Ê,E
+        LATIN1MAP(0x00cb,'E'); // Ë -> E,Ë,E
+        LATIN1MAP(0x00cc,'I'); // Ì -> I,Ì,I
+        LATIN1MAP(0x00cd,'I'); // Í -> I,Í,I
+        LATIN1MAP(0x00ce,'I'); // Î -> I,Î,I
+        LATIN1MAP(0x00cf,'I'); // Ï -> I,Ï,I
+        LATIN1MAP(0x00d0,'D'); // Ð -> D,Ð,D
+        LATIN1MAP(0x00d2,'O'); // Ò -> O,Ò,O
+        LATIN1MAP(0x00d3,'O'); // Ó -> O,Ó,O
+        LATIN1MAP(0x00d4,'O'); // Ô -> O,Ô,O
+        LATIN1MAP(0x00d5,'O'); // Õ -> O,Õ,O
+        LATIN1MAP(0x00d7,'*'); // × -> *,×,*
+        case 0x00d8:           // Ø -> 0,Ø,θ
+            return CHARMAP('0',0x00d8,233);
+        LATIN1MAP(0x00d9,'U'); // Ù -> U,Ù,U
+        LATIN1MAP(0x00da,'U'); // Ú -> U,Ú,U
+        LATIN1MAP(0x00db,'U'); // Û -> U,Û,U
+        LATIN1MAP(0x00dd,'Y'); // Ý -> U,Ý,U
+        LATIN1MAP(0x00de,'b'); // Þ -> b,Þ,b
+        case 0x00df:           // ß -> B,ß,β
+            return CHARMAP('B',0x00df,225);
+        LATIN1MAP(0x00e3,'a'); // ã -> a,ã,a
+        LATIN1MAP(0x00f5,'o'); // õ -> o,õ,o
+        LATIN1MAP(0x00fd,'y'); // ý -> y,ý,y
+        LATIN1MAP(0x00fe,'b'); // þ -> b,þ,b
+    // IBM437 derivatives. Below the chart on the following page:
+    // https://en.wikipedia.org/wiki/Code_page_437
+        case 0x03a0:           // Π -> n,¶,π
+        case 0x220f:           // ∏ -> n,¶,π
+            return CHARMAP('n',182,227);
+        case 0x2211:           // ∑ -> E,€,Σ
+            return CHARMAP('E',128,228);
+        case 0x00b5:           // μ -> u,µ,μ
+            return CHARMAP('u',181,230);
+        case 0x2126:           // Ω -> O,O,Ω
+            return CHARMAP('O','O',234);
+        case 0x00f0:           // ð -> o,ð,δ
+        case 0x2202:           // ∂ -> o,ð,δ
+            return CHARMAP('o',240,235);
+        case 0x03c6:           // φ -> o,ø,ø
+        case 0x2205:           // ∅ -> o,ø,ø
+        case 0x03d5:           // ϕ -> o,ø,ø
+        case 0x2300:           // ⌀ -> o,ø,ø
+            return CHARMAP('o',248,237);
+        case 0x03b5:           // ε -> E,€,Є
+        case 0x2208:           // ∈ -> E,€,Є
+        case 0x20ac:           // € -> E,€,Є
+            return CHARMAP('E',128,238);
+    // Misc customization.
+        case 0x309c:           // ゜-> o,°,º
+            return CHARMAP('o',176,248);
+    }
+
+    return 0;
+}
+
+bool isnc(wchar_t wchar)
+{
+    switch (wchar) {
+        case 0xFDD0:
+        case 0xFDD1:
+        case 0xFDD2:
+        case 0xFDD3:
+        case 0xFDD4:
+        case 0xFDD5:
+        case 0xFDD6:
+        case 0xFDD7:
+        case 0xFDD8:
+        case 0xFDD9:
+        case 0xFDDA:
+        case 0xFDDB:
+        case 0xFDDC:
+        case 0xFDDD:
+        case 0xFDDE:
+        case 0xFDDF:
+        case 0xFDE0:
+        case 0xFDE1:
+        case 0xFDE2:
+        case 0xFDE3:
+        case 0xFDE4:
+        case 0xFDE5:
+        case 0xFDE6:
+        case 0xFDE7:
+        case 0xFDE8:
+        case 0xFDE9:
+        case 0xFDEA:
+        case 0xFDEB:
+        case 0xFDEC:
+        case 0xFDED:
+        case 0xFDEE:
+        case 0xFDEF:
+        case 0xFDFE:
+        case 0xFDFF:
+        case 0xD83FDFFE:
+        case 0xD83FDFFF:
+        case 0xD87FDFFE:
+        case 0xD87FDFFF:
+        case 0xD8BFDFFE:
+        case 0xD8BFDFFF:
+        case 0xD8FFDFFE:
+        case 0xD8FFDFFF:
+        case 0xD93FDFFE:
+        case 0xD93FDFFF:
+        case 0xD97FDFFE:
+        case 0xD97FDFFF:
+        case 0xD9BFDFFE:
+        case 0xD9BFDFFF:
+        case 0xD9FFDFFE:
+        case 0xD9FFDFFF:
+        case 0xDA3FDFFE:
+        case 0xDA3FDFFF:
+        case 0xDA7FDFFE:
+        case 0xDA7FDFFF:
+        case 0xDABFDFFE:
+        case 0xDABFDFFF:
+        case 0xDAFFDFFE:
+        case 0xDAFFDFFF:
+        case 0xDB3FDFFE:
+        case 0xDB3FDFFF:
+        case 0xDB7FDFFE:
+        case 0xDB7FDFFF:
+        case 0xDBBFDFFE:
+        case 0xDBBFDFFF:
+            return 1;
+        default:
+            return 0;
+    }
+}
 
 int init_color_hash()
 {

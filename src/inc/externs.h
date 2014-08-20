@@ -168,6 +168,7 @@ extern void envpropqueue(int descr, dbref player, dbref where, dbref trigger,
 extern void free_timenode(timequeue ptr);
 
 /* From compress.c */
+extern int table_initialized;
 extern void init_compress_from_file(FILE * dicto);
 extern void save_compress_words_to_file(FILE * f);
 
@@ -447,6 +448,8 @@ extern char *tct(const char *in, char out[BUFFER_LEN]);
 extern char *strip_ansi(char *buf, const char *input);
 extern char *strip_bad_ansi(char *buf, const char *input);
 extern int  init_color_hash();
+extern unsigned char utf8_sbc_remap(int enc, wchar_t codepoint);
+extern bool isnc(wchar_t wchar);
 extern char *strip_256_ansi(char *buf, const char *input);
 extern char *escape_ansi(char *buf, const char *input);
 extern char *parse_mush_ansi(char *buf, char *from);
@@ -536,12 +539,10 @@ extern const char *unparse_boolexp(dbref player, struct boolexp *b,
 extern const char *ansiname(dbref loc, char buf[BUFFER_LEN]);
 
 /* From compress.c */
-#ifdef COMPRESS
 extern void save_compress_words_to_file(FILE * f);
 extern void init_compress_from_file(FILE * dicto);
 extern const char *pcompress(const char *);
 extern void init_compress(void);
-#endif /* COMPRESS */
 extern const char *puncompress(const char *);
 
 /* From edit.c */

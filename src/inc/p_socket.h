@@ -1,3 +1,9 @@
+#define SOCKOPT_NOQUEUE      0
+#define SOCKOPT_SIMPLEQUEUE  1
+#define SOCKOPT_TELNETQUEUE  2
+#define SOCKOPT_RAWMODE      3
+#define SOCKOPT_HOMEINSTANCE 5
+
 extern void prim_socksend(PRIM_PROTOTYPE);
 extern void prim_nbsockrecv(PRIM_PROTOTYPE);
 extern void prim_sockclose(PRIM_PROTOTYPE);

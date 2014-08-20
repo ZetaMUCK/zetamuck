@@ -693,9 +693,7 @@ db_write(FILE * f)
 
     putref(f, db_top);
     putref(f, DB_PARMSINFO
-#ifdef COMPRESS
-           + (db_decompression_flag ? 0 : DB_COMPRESSED)
-#endif
+           + ((!db_decompression_flag && table_initialized) ? DB_COMPRESSED : 0)
            + (db_hash_passwords ? DB_NEWPASSES : 0)
            +
            (db_hash_passwords ? ((HVER_CURRENT << HVER_SHIFT) & HVER_MASK) : 0)
@@ -872,17 +870,13 @@ getstring_noalloc(FILE * f)
 
 #define getstring(x) alloc_string(getstring_noalloc(x))
 
-#ifdef COMPRESS
 extern const char *pcompress(const char *);
 
 #ifdef ARCHAIC_DATABASES
 extern const char *old_uncompress(const char *);
 #endif /* ARCHAIC_DATABASES */
 
-#define alloc_compressed(x) alloc_string(pcompress(x))
-#else
-#define alloc_compressed(x) alloc_string(x)
-#endif /* COMPRESS */
+#define alloc_compressed(x) (table_initialized ? alloc_string(pcompress(x)) : alloc_string(x))
 
 /* returns true for numbers of form [ + | - ] <series of digits> */
 int
@@ -1839,12 +1833,21 @@ db_read(FILE * f)
                 tune_load_parms_from_file(f, NOTHING, parmcnt);
             }
             if (dbflags & DB_COMPRESSED) {
-#ifdef COMPRESS
                 init_compress_from_file(f);
-#else
+                /* New logic: auto-decompress to facilitate feature deprecation.
                 fprintf(stderr,
                         "This server is not compiled to read compressed databases.\n");
                 return -1;
+                */
+#ifndef COMPRESS
+                fprintf(stderr,
+                        "Warning:\n\n"
+                        "COMPRESS was not defined. As this feature is now\n"
+                        "considered deprecated, the game will automatically\n"
+                        "decompress your DB so that it can load properly. This\n"
+                        "message will only be displayed once, and the process\n"
+                        "can be reversed by recompiling with COMPRESS enabled.\n");
+                db_decompression_flag = 1;
 #endif
             }
 

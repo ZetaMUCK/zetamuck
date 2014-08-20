@@ -10,17 +10,13 @@
 #include "interface.h"
 #include "nan.h"
 
-#ifdef COMPRESS
 extern const char *pcompress(const char *);
 
 #ifdef ARCHAIC_DATABASES
 extern const char *old_uncompress(const char *);
 #endif
 
-#define alloc_compressed(x) alloc_string(pcompress(x))
-#else /* !COMPRESS */
-#define alloc_compressed(x) alloc_string(x)
-#endif /* COMPRESS */
+#define alloc_compressed(x) (table_initialized ? alloc_string(pcompress(x)) : alloc_string(x))
 
 /* property.c
    A whole new lachesis mod.
@@ -824,14 +820,14 @@ displayprop(dbref player, dbref obj, const char *name, char *buf)
     PropPtr p = get_property(obj, name);
 
     if (!p) {
-        sprintf(buf, SYSGLOOM "%s: No such property.", name);
+        sprintf(buf, SYSGLOOM UCNESCAPED "%s: No such property.", name);
         return buf;
     }
 #ifdef DISKBASE
     propfetch(obj, p);
 #endif
     pdflag = (PropDir(p) != NULL);
-    sprintf(tbuf, "%.*s%c", (BUFFER_LEN / 4), name,
+    sprintf(tbuf, UCNESCAPED "%.*s%c", (BUFFER_LEN / 4), name,
             (pdflag) ? PROPDIR_DELIMITER : '\0');
     tct(tbuf, mybuf);
     switch (PropType(p)) {

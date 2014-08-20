@@ -39,18 +39,12 @@
 #define FILE_BUFSIZ ((BUFSIZ)*8)
 
 /* compression stuff */
-#ifdef COMPRESS
 extern const char *puncompress(const char *);
 extern const char *pcompress(const char *);
 
-#define alloc_compressed(x) alloc_string(pcompress(x))
-#define get_compress(x) pcompress(x)
-#define get_uncompress(x) puncompress(x)
-#else /* COMPRESS */
-#define alloc_compressed(x) alloc_string(x)
-#define get_compress(x) (x)
-#define get_uncompress(x) (x)
-#endif /* COMPRESS */
+#define get_compress(x) (table_initialized ? pcompress(x) : x)
+#define get_uncompress(x) (table_initialized ? puncompress(x) : x)
+#define alloc_compressed(x) (table_initialized ? alloc_string(pcompress(x)) : alloc_string(x))
 
 /* smallest possible numbers to use before a float is considered to be '0' or
    'false'. */

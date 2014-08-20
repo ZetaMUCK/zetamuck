@@ -23,6 +23,10 @@
 #define CCMOVE ""
 #endif
 
+/* Used when UTF-8 cannot be downmixed to a target descriptor.
+ * The default is whitespace instead of '?' as it is less visually intrusive. */
+#define ASCII_REPLACEMENT_CHAR ' '
+
 /* Change this to the name of your muck.  ie: FurryMUCK, or AnimeMUCK, etc */
 #define MUCKNAME "ProtoMuck"
 #define WWWDIR "_/www"

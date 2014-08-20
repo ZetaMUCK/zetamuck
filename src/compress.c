@@ -19,7 +19,7 @@
 #include "config.h"
 #include "db.h"
 
-#ifdef COMPRESS
+//#ifdef COMPRESS
 
 /* #define BUFFER_LEN 16384 */		/* nice big buffer */
 
@@ -30,7 +30,7 @@
 
 
 /* static char token_table[MAX_CHAR][MAX_CHAR]; */
-static int table_initialized = 0;
+int table_initialized = 0;
 static char *dict[4096], *dict2[4096], line[80], buffer[40], chksum_buf[80];
 static int seconds[43][43], special_case = 5;
 static int c_index = 0;
@@ -576,4 +576,4 @@ pcompress(const char *s)
 	return (char *)buf;
 }
 
-#endif
+//#endif
