@@ -791,7 +791,7 @@ do_examine(int descr, dbref player, const char *name, const char *dir)
     }
     switch (Typeof(thing)) {
         case TYPE_ROOM:
-            sprintf(buf, "%.*s" SYSNORMAL "  Owner: %s  Parent: ",
+            sprintf(buf, UCNESCAPED "%.*s" SYSNORMAL "  Owner: %s  Parent: ",
                     (int) (BUFFER_LEN - strlen(NAME(OWNER(thing))) - 35),
                     ansi_unparse_object(OWNER(player), thing),
                     NAME(OWNER(thing)));
@@ -800,20 +800,20 @@ do_examine(int descr, dbref player, const char *name, const char *dir)
                                        DBFETCH(thing)->location));
             break;
         case TYPE_THING:
-            sprintf(buf, "%.*s" SYSNORMAL "  Owner: %s  Value: %d",
+            sprintf(buf, UCNESCAPED "%.*s" SYSNORMAL "  Owner: %s  Value: %d",
                     (int) (BUFFER_LEN - strlen(NAME(OWNER(thing))) - 35),
                     ansi_unparse_object(OWNER(player), thing),
                     NAME(OWNER(thing)), DBFETCH(thing)->sp.thing.value);
             break;
         case TYPE_PLAYER:
-            sprintf(buf, "%.*s" SYSNORMAL "  %s: %d  ",
+            sprintf(buf, UCNESCAPED "%.*s" SYSNORMAL "  %s: %d  ",
                     (int) (BUFFER_LEN - strlen(NAME(OWNER(thing))) - 35),
                     ansi_unparse_object(OWNER(player), thing),
                     tp_cpennies, DBFETCH(thing)->sp.player.pennies);
             break;
         case TYPE_EXIT:
         case TYPE_PROGRAM:
-            sprintf(buf, "%.*s" SYSNORMAL "  Owner: %s",
+            sprintf(buf, UCNESCAPED "%.*s" SYSNORMAL "  Owner: %s",
                     (int) (BUFFER_LEN - strlen(NAME(OWNER(thing))) - 35),
                     ansi_unparse_object(OWNER(player), thing),
                     NAME(OWNER(thing)));
@@ -831,98 +831,98 @@ do_examine(int descr, dbref player, const char *name, const char *dir)
 #endif /* VERBOSE_EXAMINE */
 
     if (GETDESC(thing)) {
-        sprintf(buf, SYSCYAN "DESC:" SYSAQUA " %s", tct(GETDESC(thing), buf2));
+        sprintf(buf, UCNESCAPED SYSCYAN "DESC:" SYSAQUA " %s", tct(GETDESC(thing), buf2));
         anotify_nolisten(player, buf, 1);
     }
     if (GETIDESC(thing)) {
-        sprintf(buf, SYSCYAN "IDESC:" SYSAQUA " %s",
+        sprintf(buf, UCNESCAPED SYSCYAN "IDESC:" SYSAQUA " %s",
                 tct(GETIDESC(thing), buf2));
         anotify_nolisten(player, buf, 1);
     }
 
     if (GETANSIDESC(thing)) {
-        sprintf(buf, SYSCYAN "ANSIDESC:" SYSAQUA " %s",
+        sprintf(buf, UCNESCAPED SYSCYAN "ANSIDESC:" SYSAQUA " %s",
                 tct(GETANSIDESC(thing), buf2));
         anotify_nolisten(player, buf, 1);
     }
     if (GETIANSIDESC(thing)) {
-        sprintf(buf, SYSCYAN "IANSIDESC:" SYSAQUA " %s",
+        sprintf(buf, UCNESCAPED SYSCYAN "IANSIDESC:" SYSAQUA " %s",
                 tct(GETIANSIDESC(thing), buf2));
         anotify_nolisten(player, buf, 1);
     }
 
     if (GETHTMLDESC(thing)) {
-        sprintf(buf, SYSCYAN "HTMLDESC:" SYSAQUA " %s",
+        sprintf(buf, UCNESCAPED SYSCYAN "HTMLDESC:" SYSAQUA " %s",
                 tct(GETHTMLDESC(thing), buf2));
         anotify_nolisten(player, buf, 1);
     }
     if (GETIHTMLDESC(thing)) {
-        sprintf(buf, SYSCYAN "IHTMLDESC:" SYSAQUA " %s",
+        sprintf(buf, UCNESCAPED SYSCYAN "IHTMLDESC:" SYSAQUA " %s",
                 tct(GETIHTMLDESC(thing), buf2));
         anotify_nolisten(player, buf, 1);
     }
 
-    sprintf(buf, SYSVIOLET "Key:" SYSPURPLE " %s",
+    sprintf(buf, UCNESCAPED SYSVIOLET "Key:" SYSPURPLE " %s",
             unparse_boolexp(OWNER(player), GETLOCK(thing), 1));
     anotify_nolisten(player, buf, 1);
 
-    sprintf(buf, SYSVIOLET "Chown_OK Key:" SYSPURPLE " %s",
+    sprintf(buf, UCNESCAPED SYSVIOLET "Chown_OK Key:" SYSPURPLE " %s",
             unparse_boolexp(OWNER(player), get_property_lock(thing, CHLK_PROP),
                             1));
     anotify_nolisten(player, buf, 1);
 
-    sprintf(buf, SYSVIOLET "Container Key:" SYSPURPLE " %s",
+    sprintf(buf, UCNESCAPED SYSVIOLET "Container Key:" SYSPURPLE " %s",
             unparse_boolexp(OWNER(player), get_property_lock(thing, "_/clk"),
                             1));
     anotify_nolisten(player, buf, 1);
 
-    sprintf(buf, SYSVIOLET "Force Key:" SYSPURPLE " %s",
+    sprintf(buf, UCNESCAPED SYSVIOLET "Force Key:" SYSPURPLE " %s",
             unparse_boolexp(OWNER(player), get_property_lock(thing, "@/flk"),
                             1));
     anotify_nolisten(player, buf, 1);
 
     if (GETSUCC(thing)) {
-        sprintf(buf, SYSAQUA "Success:" SYSCYAN " %s",
+        sprintf(buf, UCNESCAPED SYSAQUA "Success:" SYSCYAN " %s",
                 tct(GETSUCC(thing), buf2));
         anotify_nolisten(player, buf, 1);
     }
     if (GETFAIL(thing)) {
-        sprintf(buf, SYSAQUA "Fail:" SYSCYAN " %s", tct(GETFAIL(thing), buf2));
+        sprintf(buf, UCNESCAPED SYSAQUA "Fail:" SYSCYAN " %s", tct(GETFAIL(thing), buf2));
         anotify_nolisten(player, buf, 1);
     }
     if (GETDROP(thing)) {
-        sprintf(buf, SYSAQUA "Drop:" SYSCYAN " %s", tct(GETDROP(thing), buf2));
+        sprintf(buf, UCNESCAPED SYSAQUA "Drop:" SYSCYAN " %s", tct(GETDROP(thing), buf2));
         anotify_nolisten(player, buf, 1);
     }
     if (GETOSUCC(thing)) {
-        sprintf(buf, SYSAQUA "Osuccess:" SYSCYAN " %s",
+        sprintf(buf, UCNESCAPED SYSAQUA "Osuccess:" SYSCYAN " %s",
                 tct(GETOSUCC(thing), buf2));
         anotify_nolisten(player, buf, 1);
     }
     if (GETOFAIL(thing)) {
-        sprintf(buf, SYSAQUA "Ofail:" SYSCYAN " %s",
+        sprintf(buf, UCNESCAPED SYSAQUA "Ofail:" SYSCYAN " %s",
                 tct(GETOFAIL(thing), buf2));
         anotify_nolisten(player, buf, 1);
     }
     if (GETODROP(thing)) {
-        sprintf(buf, SYSAQUA "Odrop:" SYSCYAN " %s",
+        sprintf(buf, UCNESCAPED SYSAQUA "Odrop:" SYSCYAN " %s",
                 tct(GETODROP(thing), buf2));
         anotify_nolisten(player, buf, 1);
     }
 
     if (tp_who_doing && GETDOING(thing)) {
-        sprintf(buf, SYSAQUA "Doing:" SYSCYAN " %s",
+        sprintf(buf, UCNESCAPED SYSAQUA "Doing:" SYSCYAN " %s",
                 tct(GETDOING(thing), buf2));
         anotify_nolisten(player, buf, 1);
     }
     if (GETOECHO(thing)) {
-        sprintf(buf, SYSAQUA "Oecho:" SYSCYAN " %s",
+        sprintf(buf, UCNESCAPED SYSAQUA "Oecho:" SYSCYAN " %s",
                 tct(GETOECHO(thing), buf2));
         anotify_nolisten(player, buf, 1);
     }
     if ((Typeof(thing) == TYPE_THING) && (FLAGS(thing) & ZOMBIE)
         && GETPECHO(thing)) {
-        sprintf(buf, SYSAQUA "Pecho:" SYSCYAN " %s",
+        sprintf(buf, UCNESCAPED SYSAQUA "Pecho:" SYSCYAN " %s",
                 tct(GETPECHO(thing), buf2));
         anotify_nolisten(player, buf, 1);
     }
@@ -933,21 +933,21 @@ do_examine(int descr, dbref player, const char *name, const char *dir)
     time_tm = localtime((&(DBFETCH(thing)->ts.created)));
     ref_tm = (DBFETCH(thing)->ts.dcreated);
     (void) format_time(buf, BUFFER_LEN,
-                       (char *) SYSFOREST "Created:" SYSGREEN
+                       (char *) UCNESCAPED SYSFOREST "Created:" SYSGREEN
                        "  %a %b %e %T %Z %Y", time_tm);
     sprintf(buf, "%s by %s", buf, ref_tm < 0 ? "*NOTHING*" : ansi_unparse_object(OWNER(player), ref_tm));
     anotify_nolisten(player, buf, 1);
     time_tm = localtime((&(DBFETCH(thing)->ts.modified)));
     ref_tm = (DBFETCH(thing)->ts.dmodified);
     (void) format_time(buf, BUFFER_LEN,
-                       (char *) SYSFOREST "Modified:" SYSGREEN
+                       (char *) UCNESCAPED SYSFOREST "Modified:" SYSGREEN
                        " %a %b %e %T %Z %Y", time_tm);
     sprintf(buf, "%s by %s", buf, ref_tm < 0 ? "*NOTHING*" : ansi_unparse_object(OWNER(player), ref_tm));
     anotify_nolisten(player, buf, 1);
     time_tm = localtime((&(DBFETCH(thing)->ts.lastused)));
     ref_tm = (DBFETCH(thing)->ts.dlastused);
     (void) format_time(buf, BUFFER_LEN,
-                       (char *) SYSFOREST "Lastused:" SYSGREEN
+                       (char *) UCNESCAPED SYSFOREST "Lastused:" SYSGREEN
                        " %a %b %e %T %Z %Y", time_tm);
     sprintf(buf, "%s by %s", buf, ref_tm < 0 ? "*NOTHING*" : ansi_unparse_object(OWNER(player), ref_tm));
     anotify_nolisten(player, buf, 1);
@@ -976,8 +976,8 @@ do_examine(int descr, dbref player, const char *name, const char *dir)
         else
             anotify_nolisten(player, SYSBLUE "Contents:", 1);
         DOLIST(content, DBFETCH(thing)->contents) {
-            anotify_nolisten(player,
-                             ansi_unparse_object(OWNER(player), content), 1);
+            //anotify_nolisten(player, ansi_unparse_object(OWNER(player), content), 1);
+            anotify_fmt(player, UCNESCAPED "%s", ansi_unparse_object(OWNER(player), content));
         }
     }
     switch (Typeof(thing)) {
@@ -987,7 +987,7 @@ do_examine(int descr, dbref player, const char *name, const char *dir)
                 anotify_nolisten(player, SYSBLUE "Exits:", 1);
                 DOLIST(exit, DBFETCH(thing)->exits) {
                     strcpy(buf, ansi_unparse_object(OWNER(player), exit));
-                    anotify_fmt(player, "%s " SYSCYAN "to %s", buf,
+                    anotify_fmt(player, UCNESCAPED "%s " SYSCYAN "to %s", buf,
                                 ansi_unparse_object(OWNER(player),
                                                     DBFETCH(exit)->sp.exit.
                                                     ndest >
@@ -1001,7 +1001,7 @@ do_examine(int descr, dbref player, const char *name, const char *dir)
 
             /* print dropto if present */
             if (DBFETCH(thing)->sp.room.dropto != NOTHING) {
-                sprintf(buf, SYSAQUA "Dropped objects go to: %s",
+                sprintf(buf, UCNESCAPED SYSAQUA "Dropped objects go to: %s",
                         ansi_unparse_object(OWNER(player),
                                             DBFETCH(thing)->sp.room.dropto));
                 anotify_nolisten(player, buf, 1);
@@ -1009,14 +1009,14 @@ do_examine(int descr, dbref player, const char *name, const char *dir)
             break;
         case TYPE_THING:
             /* print home */
-            sprintf(buf, SYSAQUA "Home: %s", ansi_unparse_object(OWNER(player), DBFETCH(thing)->sp.thing.home)); /* home */
+            sprintf(buf, UCNESCAPED SYSAQUA "Home: %s", ansi_unparse_object(OWNER(player), DBFETCH(thing)->sp.thing.home)); /* home */
             anotify_nolisten(player, buf, 1);
             /* print location if player can link to it */
             if (DBFETCH(thing)->location != NOTHING
                 && (controls(OWNER(player), DBFETCH(thing)->location)
                     || can_link_to(OWNER(player), NOTYPE,
                                    DBFETCH(thing)->location))) {
-                sprintf(buf, SYSAQUA "Location: %s",
+                sprintf(buf, UCNESCAPED SYSAQUA "Location: %s",
                         ansi_unparse_object(OWNER(player),
                                             DBFETCH(thing)->location));
                 anotify_nolisten(player, buf, 1);
@@ -1026,7 +1026,7 @@ do_examine(int descr, dbref player, const char *name, const char *dir)
                 anotify_nolisten(player, SYSBLUE "Actions/exits:", 1);
                 DOLIST(exit, DBFETCH(thing)->exits) {
                     strcpy(buf, ansi_unparse_object(OWNER(player), exit));
-                    anotify_fmt(player, "%s " SYSCYAN "to %s", buf,
+                    anotify_fmt(player, UCNESCAPED "%s " SYSCYAN "to %s", buf,
                                 ansi_unparse_object(OWNER(player),
                                                     DBFETCH(exit)->sp.exit.
                                                     ndest >
@@ -1041,7 +1041,7 @@ do_examine(int descr, dbref player, const char *name, const char *dir)
         case TYPE_PLAYER:
 
             /* print home */
-            sprintf(buf, SYSAQUA "Home: %s", ansi_unparse_object(OWNER(player), DBFETCH(thing)->sp.player.home)); /* home */
+            sprintf(buf, UCNESCAPED SYSAQUA "Home: %s", ansi_unparse_object(OWNER(player), DBFETCH(thing)->sp.player.home)); /* home */
             anotify_nolisten(player, buf, 1);
 
             /* print location if player can link to it */
@@ -1049,14 +1049,14 @@ do_examine(int descr, dbref player, const char *name, const char *dir)
                 && (controls(OWNER(player), DBFETCH(thing)->location)
                     || can_link_to(OWNER(player), NOTYPE,
                                    DBFETCH(thing)->location))) {
-                sprintf(buf, SYSAQUA "Location: %s",
+                sprintf(buf, UCNESCAPED SYSAQUA "Location: %s",
                         ansi_unparse_object(OWNER(player),
                                             DBFETCH(thing)->location));
                 anotify_nolisten(player, buf, 1);
             }
             /* print player's actions, if any */
             if (DBFETCH(thing)->exits != NOTHING) {
-                anotify_nolisten(player, SYSBLUE "Actions/exits:", 1);
+                anotify_nolisten(player, UCNESCAPED SYSBLUE "Actions/exits:", 1);
                 DOLIST(exit, DBFETCH(thing)->exits) {
                     strcpy(buf, ansi_unparse_object(OWNER(player), exit));
                     anotify_fmt(player, "%s " SYSCYAN "to %s", buf,
@@ -1073,7 +1073,7 @@ do_examine(int descr, dbref player, const char *name, const char *dir)
             break;
         case TYPE_EXIT:
             if (DBFETCH(thing)->location != NOTHING) {
-                sprintf(buf, SYSAQUA "Source: %s",
+                sprintf(buf, UCNESCAPED SYSAQUA "Source: %s",
                         ansi_unparse_object(OWNER(player),
                                             DBFETCH(thing)->location));
                 anotify_nolisten(player, buf, 1);
@@ -1090,7 +1090,7 @@ do_examine(int descr, dbref player, const char *name, const char *dir)
                                          1);
                         break;
                     default:
-                        sprintf(buf, SYSAQUA "Destination: %s",
+                        sprintf(buf, UCNESCAPED SYSAQUA "Destination: %s",
                                 ansi_unparse_object(OWNER(player),
                                                     (DBFETCH(thing)->sp.exit.
                                                      dest)[i]));
@@ -1118,7 +1118,7 @@ do_examine(int descr, dbref player, const char *name, const char *dir)
                 && (controls(OWNER(player), DBFETCH(thing)->location)
                     || can_link_to(OWNER(player), NOTYPE,
                                    DBFETCH(thing)->location))) {
-                sprintf(buf, SYSAQUA "Location: %s",
+                sprintf(buf, UCNESCAPED SYSAQUA "Location: %s",
                         ansi_unparse_object(OWNER(player),
                                             DBFETCH(thing)->location));
                 anotify_nolisten(player, buf, 1);

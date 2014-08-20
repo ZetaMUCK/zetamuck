@@ -73,15 +73,30 @@ extern int printfdbg(int rarg);
                                              that cannot be rendered in the
                                              target descriptor's encoding. */
 #define NC_UCNSTOP   0xFDD1 /* queue_string: stop UCN escaping */
-#define NC_MXPOPEN   0xFDD2 /* MXP: open HTML tag. render as < for DF_MXP, else
+#define NC_MXPLINE   0xFDD2 /* MXP: Sent prior to a line that should only be
+                                    seen by MXP clients. Allows the entire line
+                                    to be dropped without further processing. */
+#define NC_MXPOPEN   0xFDD3 /* MXP: open HTML tag. render as < for DF_MXP, else
                                     discard all characters until NC_MXPCLOSE */
-#define NC_MXPCLOSE  0xFDD3 /* MXP: close HTML tag. render as > for DF_MXP, else
+#define NC_MXPCLOSE  0xFDD4 /* MXP: close HTML tag. render as > for DF_MXP, else
                                     close the NC_MXPOPEN discard sequence */
+#define NC_MXPAMP    0xFDD5 /* MXP: Unescaped HTML entity: & */
+#define NC_MXPQUOT   0xFDD6 /* MXP: Unescaped HTML entity: " */
+
 
 #define NC_UCNSTART_UTF8 "\xEF\xB7\x90"
 #define NC_UCNSTOP_UTF8  "\xEF\xB7\x91"
-#define NC_MXPOPEN_UTF8  "\xEF\xB7\x92"
-#define NC_MXPCLOSE_UTF8 "\xEF\xB7\x93"
+#define NC_MXPLINE_UTF8  "\xEF\xB7\x92"
+#define NC_MXPOPEN_UTF8  "\xEF\xB7\x93"
+#define NC_MXPCLOSE_UTF8 "\xEF\xB7\x94"
+#define NC_MXPAMP_UTF8   "\xEF\xB7\x95"
+#define NC_MXPQUOT_UTF8  "\xEF\xB7\x96"
+
+#ifdef UTF8_SUPPORT
+# define UCNESCAPED NC_UCNSTART_UTF8
+#else
+# define UCNESCAPED ""
+#endif
 
 /* structures */
 
@@ -271,7 +286,7 @@ struct descriptor_data {
                                  MCCP-enabled -hinoserm */
 #define DF_MXP         0x1000 /* Client supports MUD eXtension Protocol
                                  -- UNIMPLEMENTED */
-#define DF_MSP         0x2000 /* Client supports MUD Sount Protocol
+#define DF_MSP         0x2000 /* Client supports MUD Sound Protocol
                                  -- UNIMPLEMENTED */
 #define DF_IPV6       0x10000 /* Client is connected using IPv6. */
 #define DF_256COLOR   0x20000 /* This descriptor is accepting 256 color */

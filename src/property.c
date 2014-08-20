@@ -820,14 +820,14 @@ displayprop(dbref player, dbref obj, const char *name, char *buf)
     PropPtr p = get_property(obj, name);
 
     if (!p) {
-        sprintf(buf, SYSGLOOM "%s: No such property.", name);
+        sprintf(buf, SYSGLOOM UCNESCAPED "%s: No such property.", name);
         return buf;
     }
 #ifdef DISKBASE
     propfetch(obj, p);
 #endif
     pdflag = (PropDir(p) != NULL);
-    sprintf(tbuf, "%.*s%c", (BUFFER_LEN / 4), name,
+    sprintf(tbuf, UCNESCAPED "%.*s%c", (BUFFER_LEN / 4), name,
             (pdflag) ? PROPDIR_DELIMITER : '\0');
     tct(tbuf, mybuf);
     switch (PropType(p)) {

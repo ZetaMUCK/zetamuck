@@ -18,51 +18,6 @@
 
 /* Hash table of color names->numeric color index lookup */
 static hash_tab color_list[COLOR_HASH_SIZE];
-static long utf8_hex[255];
-
-/* This assembles an array that can be used to calculate the hexadecimal value
- * of a character encoded with UTF-8. Generally you should rely upon iconv for
- * arbitrary conversions between encodings that a user supplies, but there are
- * a few places in the code where we need to be able to do this math ourselves.
- */
-void init_utf8_hex()
-{
-    int i1;
-    int i2 = 0;
-
-    /* US-ASCII Compatibility */
-    for (i1=0x0; i1 != 0x80; i1++) {
-        utf8_hex[i1] = i1;
-    }
-
-    /* Continuation Bytes */
-    for (i1=0x80; i1 != 0xC0; i1++) {
-        utf8_hex[i1] = i2++;
-    }
-
-    /* Start Bytes */
-    utf8_hex[0xC0] = 0x0; // Illegal: Overlong encoding
-    utf8_hex[0xC1] = 0x0; // Illegal: Overlong encoding
-
-    utf8_hex[0xC2] = 0x0080;
-    for (i1=0xC3; i1 != 0xE1; i1++) { // 0x0040 increments
-        utf8_hex[i1] = utf8_hex[i1 - 1] + 0x0040;
-    }
-
-    utf8_hex[0xE1] = 0x1000;
-    for (i1=0xE2; i1 != 0xF1; i1++) { // 0x1000 increments
-        utf8_hex[i1] = utf8_hex[i1 - 1] + 0x1000;
-    }
-
-    utf8_hex[0xF1] = 0x040000; // 0x40000 increments are faster to do by hand.
-    utf8_hex[0xF2] = 0x080000;
-    utf8_hex[0xF3] = 0x0C0000;
-    utf8_hex[0xF4] = 0x100000;
-
-    for (i1=0xF5; i1 != 0x100; i1++) { // Illegal: >0x10FFFF is out of bounds.
-        utf8_hex[i1] = 0x0;
-    }
-}
 
 #define CHARMAP(x,y,z) (enc == ENC_ASCII ? x : \
                         (enc == ENC_LATIN1 ? y : \
@@ -502,6 +457,79 @@ unsigned char utf8_sbc_remap(int enc, wchar_t codepoint) {
     }
 
     return 0;
+}
+
+bool isnc(wchar_t wchar)
+{
+    switch (wchar) {
+        case 0xFDD0:
+        case 0xFDD1:
+        case 0xFDD2:
+        case 0xFDD3:
+        case 0xFDD4:
+        case 0xFDD5:
+        case 0xFDD6:
+        case 0xFDD7:
+        case 0xFDD8:
+        case 0xFDD9:
+        case 0xFDDA:
+        case 0xFDDB:
+        case 0xFDDC:
+        case 0xFDDD:
+        case 0xFDDE:
+        case 0xFDDF:
+        case 0xFDE0:
+        case 0xFDE1:
+        case 0xFDE2:
+        case 0xFDE3:
+        case 0xFDE4:
+        case 0xFDE5:
+        case 0xFDE6:
+        case 0xFDE7:
+        case 0xFDE8:
+        case 0xFDE9:
+        case 0xFDEA:
+        case 0xFDEB:
+        case 0xFDEC:
+        case 0xFDED:
+        case 0xFDEE:
+        case 0xFDEF:
+        case 0xFDFE:
+        case 0xFDFF:
+        case 0xD83FDFFE:
+        case 0xD83FDFFF:
+        case 0xD87FDFFE:
+        case 0xD87FDFFF:
+        case 0xD8BFDFFE:
+        case 0xD8BFDFFF:
+        case 0xD8FFDFFE:
+        case 0xD8FFDFFF:
+        case 0xD93FDFFE:
+        case 0xD93FDFFF:
+        case 0xD97FDFFE:
+        case 0xD97FDFFF:
+        case 0xD9BFDFFE:
+        case 0xD9BFDFFF:
+        case 0xD9FFDFFE:
+        case 0xD9FFDFFF:
+        case 0xDA3FDFFE:
+        case 0xDA3FDFFF:
+        case 0xDA7FDFFE:
+        case 0xDA7FDFFF:
+        case 0xDABFDFFE:
+        case 0xDABFDFFF:
+        case 0xDAFFDFFE:
+        case 0xDAFFDFFF:
+        case 0xDB3FDFFE:
+        case 0xDB3FDFFF:
+        case 0xDB7FDFFE:
+        case 0xDB7FDFFF:
+        case 0xDBBFDFFE:
+        case 0xDBBFDFFF:
+            return 1;
+        default:
+            return 0;
+    }
 }
 
 int init_color_hash()

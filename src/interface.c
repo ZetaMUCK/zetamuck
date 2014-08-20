@@ -425,7 +425,6 @@ main(int argc, char **argv)
     init_descriptor_lookup();
     init_descr_count_lookup();
     init_color_hash();
-    init_utf8_hex();
 
     nomore_options = 0;
     sanity_skip = 0;
@@ -3473,6 +3472,9 @@ queue_string(struct descriptor_data *d, const char *s)
     char unsigned remap;
     int wclen;
     wchar_t wchar;
+    bool ucn_escaping = 0;
+    bool mxp_open = 0;
+    bool in_paragraph = 0;
 
     // Initialize shift state.
     mbtowc(NULL, NULL, 0);
@@ -3482,51 +3484,181 @@ queue_string(struct descriptor_data *d, const char *s)
     if (!*s || d->encoding == ENC_RAW) {
         result = queue_write(d, s, len);
         return result;
+    } else {
 #ifdef UTF8_SUPPORT
-    } else if (d->encoding == ENC_UTF8) { /* UTF-8 */
-		/* each invalid byte of s potentially maps to three UTF-8 bytes */
-		wchar_t wctmp;
-		int wclen;
-        
-        filtered = (char *) malloc( (len*3) + 1);
-        fp = filtered;
-        //fend = filtered + (len*3);
-
-        for (sp = s; *sp != '\0'; sp++) {
-            wclen = mbtowc(&wctmp, sp, send - sp + 1);
-            if (wclen != -1) {
-                /* no check for overrun, we can hold the max size. */
-                memcpy(fp, sp, wclen);
-                fp += wclen;
-                /* the loop itself adds 1 */
-                sp += wclen - 1;
-            }
-            if (wclen == -1) {
-                /* invalid byte, insert U+FFFD */
-                *fp++ = '\xef';
-                *fp++ = '\xbf';
-                *fp++ = '\xbd';
-            }
+        if (d->encoding == ENC_UTF8) {
+            /* Each invalid byte of s potentially maps to three UTF-8 bytes. */
+            filtered = (char *) malloc( (len*3) + 1);
+        } else {
+            /* Each UCN escaped byte of s potentially maps to eight ASCII bytes. */
+            filtered = (char *) malloc((len*8) + 1);
         }
-#endif
-    } else { /* single byte encodings: ENC_ASCII, ENC_LATIN1, ENC_IBM437 */
+#else
         filtered = (char *) malloc(len + 1);
+#endif
         fp = filtered;
         //fend = filtered + len;
         
         for (sp = s; s < send && *sp != '\0'; sp++) {
+            // MXP check
+            if (DR_RAW_FLAGS(d, DF_MXP)) {
+                switch (*sp) {
+                    case '<':
+                        memcpy(fp, "&lt;", 4);
+                        fp += 4;
+                        continue;
+                    case '>':
+                        memcpy(fp, "&gt;", 4);
+                        fp += 4;
+                        continue;
+                    case '&':
+                        memcpy(fp, "&amp;", 5);
+                        fp += 5;
+                        continue;
+                    case '"':
+                        memcpy(fp, "&quot;", 6);
+                        fp += 6;
+                        continue;
+                }
+            }
 #ifdef UTF8_SUPPORT
-            // prefer our custom remappings
+
             wclen = mbtowc(&wchar, sp, send - sp);
-            if (wclen > 1 && (remap = utf8_sbc_remap(d->encoding, wchar))) {
+
+            if (DR_RAW_FLAGS(d, DF_MXP)) {
+                switch (wchar) {
+                    case 0x00A0: // NBSP -> &nbsp;
+                        memcpy(fp, "&nbsp;", 6);
+                        fp += 6;
+                        continue;
+                    case 0x2028: // Line Separator -> <br>
+                        memcpy(fp, "<br>", 4);
+                        fp += 4;
+                        continue;
+                    case 0x2029: // Paragraph Separator -> <p>
+                        if (in_paragraph) {
+                            in_paragraph = 0;
+                            memcpy(fp, "</p>", 4);
+                            fp += 4;
+                        } else {
+                            in_paragraph = 1;
+                            memcpy(fp, "<p>", 3);
+                            fp += 3;
+                        }
+                        continue;
+                }
+            } else if (mxp_open && wchar != NC_MXPCLOSE) {
+                // Inside HTML tag, discard.
+                continue;
+            }
+
+            /* Noncharacter handling. Either it's an escape we define inside of
+             * the interface.h header, or we drop the sequence. */
+            if (isnc(wchar)) {
+                switch (wchar) {
+                    case NC_UCNSTART:
+                        ucn_escaping = 1;
+                        break;
+                    case NC_UCNSTOP:
+                        ucn_escaping = 0;
+                        break;
+                    case NC_MXPLINE:
+                        // Drop this line if we're not a MXP session.
+                        if (!DR_RAW_FLAGS(d, DF_MXP)) {
+                            free(filtered);
+                            return 0;
+                        }
+                        break;
+                    case NC_MXPOPEN:
+                        mxp_open = 1;
+                        if (DR_RAW_FLAGS(d, DF_MXP)) {
+                            *fp++ = '<';
+                        }
+                        break;
+                    case NC_MXPCLOSE:
+                        mxp_open = 0;
+                        if (DR_RAW_FLAGS(d, DF_MXP)) {
+                            *fp++ = '>';
+                        }
+                        break;
+                    case NC_MXPAMP:
+                        *fp++ = '&';
+                        break;
+                    case NC_MXPQUOT:
+                        *fp++ = '"';
+                        break;
+                }
+                sp += wclen - 1;
+                continue;
+            }
+
+            if (d->encoding == ENC_UTF8) {
+                if (wclen == 1 || wclen == 0 ) {
+                    *fp++ = *sp;
+                    continue;
+                } else if (wclen > 1) {
+                    if (!isnc(wchar)) {
+                        /* no check for overrun, we can hold the max size. */
+                        memcpy(fp, sp, wclen);
+                        fp += wclen;
+                    }
+                    /* the loop itself adds 1 */
+                    sp += wclen - 1;
+                    continue;
+                } else if (wclen == -1) {
+                    /* invalid byte, insert U+FFFD */
+                    *fp++ = '\xef';
+                    *fp++ = '\xbf';
+                    *fp++ = '\xbd';
+                    continue;
+                } else {
+                    assert(0 && "mbtowc returned <-1!");
+                }
+                // Everything past here is for single-byte encodings.
+            } else if (wclen > 1 && ucn_escaping) {
+                /* This is an escaped literal character sequence. Its meaning
+                 * must be preserved in case it is pasted back into the game. */
+                if (wchar > 0xFFFF) {
+                    fp += sprintf(fp, "\\U%06lx", (unsigned long)wchar);
+                } else {
+                    fp += sprintf(fp, "\\u%04lx", (unsigned long)wchar);
+                }
+                sp += wclen - 1;
+                continue;
+            } else if (wclen > 1 && (remap = utf8_sbc_remap(d->encoding, wchar))) {
+                // prefer our custom remappings
                 if (remap == 255 && DR_RAW_FLAGS(d, DF_TELNET)) {
                     // Character 255 must be escaped as IAC+IAC.
                     *fp++ = TELOPT_IAC;
                 }
+                sp += wclen - 1;
+
+                // post-remap MXP check
+                if (DR_RAW_FLAGS(d, DF_MXP)) {
+                    switch (remap) {
+                        case '<':
+                            memcpy(fp, "&lt;", 4);
+                            fp += 4;
+                            continue;
+                        case '>':
+                            memcpy(fp, "&gt;", 4);
+                            fp += 4;
+                            continue;
+                        case '&':
+                            memcpy(fp, "&amp;", 5);
+                            fp += 5;
+                            continue;
+                        case '"':
+                            memcpy(fp, "&quot;", 6);
+                            fp += 6;
+                            continue;
+                    }
+                }
+
                 *fp++ = remap;
-                sp = sp + wclen - 1;
                 continue;
             }
+
 #endif
 
             // Must be ASCII at this point.
@@ -6894,6 +7026,7 @@ welcome_user(struct descriptor_data *d)
                      * "SAUCE" of .ans files which have been loaded into the
                      * welcome screen for testing purposes. */
                     EOF_seen = 1;
+                    *ptr = '\0';
                 }
                 if (ptr >= (outbuf + BUFFER_LEN - 3)) {
                     // truncate it

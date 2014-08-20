@@ -2,6 +2,11 @@
 #include <interface.h>
 #include <telnet.h>
 
+char *iacbyte[255];
+
+char *teopt[255];
+
+
 /* Advertise telnet options. This probably shouldn't be called more than once
  * per client connection. */
 void
@@ -10,6 +15,9 @@ telopt_advertise(struct descriptor_data *d)
     queue_write(d, "\xFF\xFB\x46",       3); /* IAC WILL MSSP */
     queue_write(d, "\xFF\xFB\x56\x0A",   4); /* IAC WILL TELOPT_COMPRESS2 (MCCP v2) */
     queue_write(d, "\xFF\xFB\x2A",       3); /* IAC WILL CHARSET */
+#ifdef UTF8_SUPPORT
+    queue_write(d, "\xFF\xFB\x5B",       3); /* IAC WILL MXP */
+#endif
     queue_write(d, "\xFF\xFD\x18",       3); /* IAC DO TERMTYPE */
     queue_write(d, "\xFF\xFD\x1F",       3); /* IAC DO NAWS */
     /* Can't IAC DO CHARSET due to Potato:
@@ -198,6 +206,14 @@ process_telnet_IAC(struct descriptor_data *d, char *q, char *p, char *pend)
                 mccp_start(d, d->telopt.mccp);
         } else if (*q == TELOPT_MSSP) {
             mssp_send(d);
+#ifdef UTF8_SUPPORT
+        } else if (*q == TELOPT_MXP) {
+            DR_RAW_ADD_FLAGS(d, DF_MXP);
+            // enable MXP
+            queue_write(d, "\xFF\xFA\x5B\xFF\xF0", 5); /* IAC SB MXP IAC SE */
+            // lock secure mode
+            queue_write(d, "\x1B[6z", 4); /* ESC [ 6 z */
+#endif
         } else if (*q == TELOPT_NAWS) {
         } else if (*q == TELOPT_CHARSET) {
             charset_send(d);
