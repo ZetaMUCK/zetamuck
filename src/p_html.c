@@ -59,7 +59,7 @@ p_stopmidi(dbref player)
 
     strcpy(buf, "");
     if (FLAG2(player) & F2PUEBLO) {
-        sprintf(buf, "<img xch_sound=stop device=midi>");
+        strcpy(buf, "<img xch_sound=stop device=midi>");
     }
     return (buf);
 }

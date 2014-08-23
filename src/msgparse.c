@@ -459,7 +459,7 @@ const char *
 ref2str(dbref obj, char *buf)
 {
     if (obj < -3 || obj >= db_top) {
-        sprintf(buf, "Bad");
+        strcpy(buf, "Bad");
         return buf;
     }
 

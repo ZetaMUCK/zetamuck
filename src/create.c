@@ -1164,7 +1164,7 @@ do_action(int descr, dbref player, const char *action_name,
         DBFETCH(action)->sp.exit.ndest = 1;
         DBFETCH(action)->sp.exit.dest = (dbref *) malloc(sizeof(dbref));
         (DBFETCH(action)->sp.exit.dest)[0] = NIL;
-        sprintf(buf, CINFO "Linked to NIL.");
+        strcpy(buf, CINFO "Linked to NIL.");
         anotify_nolisten2(player, buf);
     }
 

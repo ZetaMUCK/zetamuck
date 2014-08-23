@@ -277,8 +277,7 @@ muf_backtrace(dbref player, dbref program, int count, struct frame *fr)
                              k ? SYSWHITE ", %s=" SYSNORMAL "%s" : SYSWHITE
                              "%s=" SYSNORMAL "%s", nam, val);
             }
-            bufend +=
-                snprintf(bufend, buf2 - bufend - 1, SYSWHITE ")" SYSNORMAL);
+            bufend += strncpy(bufend, SYSWHITE ")" SYSNORMAL, buf2 - bufend - 1) - buf2;
             ptr = buf2;
         }
 

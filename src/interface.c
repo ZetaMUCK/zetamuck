@@ -551,22 +551,22 @@ main(int argc, char **argv)
 
 #ifndef WIN_VC
 #ifdef UTF8_SUPPORT
-    if (!setlocale(LC_CTYPE, "en_US.UTF-8")) {
-        fprintf(stdout, "Unable to change locale to UTF-8, aborting.\n");
-        fprintf(stdout, "Make sure your OS supports it!\n");
-        exit(1);
-    }
+//    if (!setlocale(LC_CTYPE, "en_US.UTF-8")) {
+//        fprintf(stdout, "Unable to change locale to UTF-8, aborting.\n");
+//        fprintf(stdout, "Make sure your OS supports it!\n");
+//        exit(1);
+//    }
 #ifndef LEGACY_COLLATION
     /* Setting LC_COLLATE to UTF-8 mode will confuse some people, i.e. "foobar"
      * will sort before ".foobar" and ".foobar" will sort before "foobaz". This
      * only effects the sorting of the standard library, it doesn't change any
      * of the manual sorting that we do. (i.e. prop ordering in examine) */
-    if (!setlocale(LC_COLLATE, "en_US.UTF-8")) {
-        fprintf(stdout, "Unable to change collation order to en_US.UTF-8!.\n");
-        fprintf(stdout, "Changing LC_CTYPE to en_US.UTF-8 succeeded though, weird.\n");
-        fprintf(stdout, "E-mail this error to davin@protomuck.org.\n");
-        exit(1);
-    }
+//    if (!setlocale(LC_COLLATE, "en_US.UTF-8")) {
+//        fprintf(stdout, "Unable to change collation order to en_US.UTF-8!.\n");
+//        fprintf(stdout, "Changing LC_CTYPE to en_US.UTF-8 succeeded though, weird.\n");
+//        fprintf(stdout, "E-mail this error to davin@protomuck.org.\n");
+//        exit(1);
+//    }
 #endif /* LEGACY_COLLATION */
 #endif /* UTF8_SUPPORT */
 
@@ -3215,7 +3215,7 @@ initializesock(int s, struct huinfo *hu, int ctype, int cport, int welcome)
     d->raw_input_at = 0;
     d->bsescape = 0;
 #ifdef UTF8_SUPPORT
-    d->raw_input_wclen = 0;
+    d->raw_input_uclen = 0;
 #endif
     d->inIAC = 0;
     d->truncate = 0;
@@ -3383,7 +3383,7 @@ make_socket6(int port)
 #endif
 
 struct text_block *
-make_text_block(const char *s, int len, int wclen)
+make_text_block(const char *s, int len, int uclen)
 {
     struct text_block *p;
 
@@ -3393,7 +3393,7 @@ make_text_block(const char *s, int len, int wclen)
     bcopy(s, p->buf, len);
     p->nchars = len;
 #ifdef UTF8_SUPPORT
-    p->nwchars = wclen;
+    p->nwchars = uclen;
 #endif
     p->start = p->buf;
     p->nxt = 0;
@@ -3408,14 +3408,14 @@ free_text_block(struct text_block *t)
 }
 
 void
-add_to_queue(struct text_queue *q, const char *b, int len, int wclen)
+add_to_queue(struct text_queue *q, const char *b, int len, int uclen)
 {
     struct text_block *p;
 
     if (len == 0)
         return;
 
-    p = make_text_block(b, len, wclen);
+    p = make_text_block(b, len, uclen);
     p->nxt = 0;
     *q->tail = p;
     q->tail = &p->nxt;
@@ -3470,14 +3470,11 @@ queue_string(struct descriptor_data *d, const char *s)
     // char *fend;
 #ifdef UTF8_SUPPORT
     char unsigned remap;
-    int wclen;
-    wchar_t wchar;
+    int uclen;
+    ucs4_t uchar;
     bool ucn_escaping = 0;
     bool mxp_open = 0;
     bool in_paragraph = 0;
-
-    // Initialize shift state.
-    mbtowc(NULL, NULL, 0);
 #endif
 
 
@@ -3522,11 +3519,17 @@ queue_string(struct descriptor_data *d, const char *s)
                 }
             }
 #ifdef UTF8_SUPPORT
+            uclen = u8_mbtoucr(&uchar, (uint8_t *)sp, send - sp);
 
-            wclen = mbtowc(&wchar, sp, send - sp);
+            if (uclen < 0) {
+                /* Malformed character, probably truncated by a sprintf
+                 * somewhere. Convert and keep going. */
+                *fp++ = ASCII_REPLACEMENT_CHAR;
+                continue;
+            }
 
             if (DR_RAW_FLAGS(d, DF_MXP)) {
-                switch (wchar) {
+                switch (uchar) {
                     case 0x00A0: // NBSP -> &nbsp;
                         memcpy(fp, "&nbsp;", 6);
                         fp += 6;
@@ -3547,15 +3550,15 @@ queue_string(struct descriptor_data *d, const char *s)
                         }
                         continue;
                 }
-            } else if (mxp_open && wchar != NC_MXPCLOSE) {
+            } else if (mxp_open && uchar != NC_MXPCLOSE) {
                 // Inside HTML tag, discard.
                 continue;
             }
 
             /* Noncharacter handling. Either it's an escape we define inside of
              * the interface.h header, or we drop the sequence. */
-            if (isnc(wchar)) {
-                switch (wchar) {
+            if (isnc(uchar)) {
+                switch (uchar) {
                     case NC_UCNSTART:
                         ucn_escaping = 1;
                         break;
@@ -3588,24 +3591,24 @@ queue_string(struct descriptor_data *d, const char *s)
                         *fp++ = '"';
                         break;
                 }
-                sp += wclen - 1;
+                sp += uclen - 1;
                 continue;
             }
 
             if (d->encoding == ENC_UTF8) {
-                if (wclen == 1 || wclen == 0 ) {
+                if (uclen == 1 || uclen == 0 ) {
                     *fp++ = *sp;
                     continue;
-                } else if (wclen > 1) {
-                    if (!isnc(wchar)) {
+                } else if (uclen > 1) {
+                    if (!isnc(uchar)) {
                         /* no check for overrun, we can hold the max size. */
-                        memcpy(fp, sp, wclen);
-                        fp += wclen;
+                        memcpy(fp, sp, uclen);
+                        fp += uclen;
                     }
                     /* the loop itself adds 1 */
-                    sp += wclen - 1;
+                    sp += uclen - 1;
                     continue;
-                } else if (wclen == -1) {
+                } else if (uclen == -1) {
                     /* invalid byte, insert U+FFFD */
                     *fp++ = '\xef';
                     *fp++ = '\xbf';
@@ -3615,23 +3618,23 @@ queue_string(struct descriptor_data *d, const char *s)
                     assert(0 && "mbtowc returned <-1!");
                 }
                 // Everything past here is for single-byte encodings.
-            } else if (wclen > 1 && ucn_escaping) {
+            } else if (uclen > 1 && ucn_escaping) {
                 /* This is an escaped literal character sequence. Its meaning
                  * must be preserved in case it is pasted back into the game. */
-                if (wchar > 0xFFFF) {
-                    fp += sprintf(fp, "\\U%06lx", (unsigned long)wchar);
+                if (uchar > 0xFFFF) {
+                    fp += sprintf(fp, "\\U%06lx", (unsigned long)uchar);
                 } else {
-                    fp += sprintf(fp, "\\u%04lx", (unsigned long)wchar);
+                    fp += sprintf(fp, "\\u%04lx", (unsigned long)uchar);
                 }
-                sp += wclen - 1;
+                sp += uclen - 1;
                 continue;
-            } else if (wclen > 1 && (remap = utf8_sbc_remap(d->encoding, wchar))) {
+            } else if (uclen > 1 && (remap = utf8_sbc_remap(d->encoding, uchar))) {
                 // prefer our custom remappings
                 if (remap == 255 && DR_RAW_FLAGS(d, DF_TELNET)) {
                     // Character 255 must be escaped as IAC+IAC.
                     *fp++ = TELOPT_IAC;
                 }
-                sp += wclen - 1;
+                sp += uclen - 1;
 
                 // post-remap MXP check
                 if (DR_RAW_FLAGS(d, DF_MXP)) {
@@ -3815,7 +3818,7 @@ freeqs(struct descriptor_data *d)
     d->raw_input_at = 0;
     d->bsescape = 0;
 #ifdef UTF8_SUPPORT
-    d->raw_input_wclen = 0;
+    d->raw_input_uclen = 0;
 #endif
 }
 
@@ -3824,7 +3827,7 @@ freeqs(struct descriptor_data *d)
  * queue, though this might change in the future.
  * Returns 1 if the input is anything other than the unidle word. */
 int
-save_command(struct descriptor_data *d, char *command, int len, int wclen)
+save_command(struct descriptor_data *d, char *command, int len, int uclen)
 {
 #ifdef UTF8_SUPPORT
     static char iconvbuf[MAX_COMMAND_LEN];
@@ -3893,9 +3896,9 @@ save_command(struct descriptor_data *d, char *command, int len, int wclen)
     }
 #endif
 
-    /* If wclen is < 0, the meaning is special. Don't add 1. */
+    /* If uclen is < 0, the meaning is special. Don't add 1. */
     add_to_queue(&d->input, command, len + 1,
-            wclen < 0 ? wclen : wclen + 1);
+            uclen < 0 ? uclen : uclen + 1);
     //add_to_queue(&d->input, command, strlen(command) + 1);
     return 1;
 }
@@ -3905,15 +3908,17 @@ int
 process_backslash_escape(struct descriptor_data *d,
         char **qptr, char *qend,
         char **pptr, char *pend,
-        int *wclen_in)
+        int *uclen_in)
 {
-    int utf8len = 0; // number of UTF-8 bytes represented by a UCN escape
     char *q = *qptr; // current string from the input queue
     char *p = *pptr; // current location in the d->raw_input put buffer
     char ucnbuf[9];  // holds "nnnnnnnn" + '\0'
+#ifdef UTF8_SUPPORT
+    int utf8len = 0; // number of UTF-8 bytes represented by a UCN escape
     int ucnlen = 0;  // number of bytes stored in ucnbuf
-    wchar_t wchar;   // the character the UCN escape maps to
+    ucs4_t uchar;   // the character the UCN escape maps to
     int ucn_i;
+#endif
 
     if (*q == 92) { // backslash
         if (d->bsescape < 2) {
@@ -3955,6 +3960,7 @@ process_backslash_escape(struct descriptor_data *d,
 
                 return 0;
         }
+#ifdef UTF8_SUPPORT
         if (ucnlen) {
             if (ucnlen && q + ucnlen < qend) {
                 for (ucn_i=0; ucn_i != ucnlen; ucn_i++) {
@@ -3973,18 +3979,17 @@ process_backslash_escape(struct descriptor_data *d,
             *qptr = q + ucnlen;
 
             ucnbuf[ucn_i] = '\0';
-            // ucnbuf now contains the digits, convert to wchar_t integer
-            wchar = strtoul(ucnbuf, NULL, 16);
+            // ucnbuf now contains the digits, convert to long
+            uchar = strtoul(ucnbuf, NULL, 16);
 
             // convert this integer to UTF-8 bytes, reuse ucnbuf
-            wctomb(NULL, wchar);
-            utf8len = wctomb(ucnbuf, wchar);
+            utf8len = u8_uctomb((uint8_t *)ucnbuf, uchar, sizeof ucnbuf);
 
-            if (wchar < 0x00A0) {
+            if (uchar < 0x00A0) {
                 anotify_descriptor(d->descriptor, CFAIL "Input: Escapes \\u and \\U must not be used to encode ASCII. (< 00A0 ignored)\n");
 
             }
-            if (wchar >= 0xD800 && wchar <= 0xDFFF) { // surrogate pairs
+            if (uchar >= 0xD800 && uchar <= 0xDFFF) { // surrogate pairs
                 anotify_descriptor(d->descriptor, CFAIL "Input: Escape \\u must not encode a surrogate. Use \\U instead.\n");
             }
             
@@ -4002,6 +4007,7 @@ process_backslash_escape(struct descriptor_data *d,
             }
 
         }
+#endif
     }
 
     return 0;
@@ -4015,8 +4021,8 @@ process_input(struct descriptor_data *d)
 	char *p, *pend, *q, *qend;
 	int got;
 #ifdef UTF8_SUPPORT
-    wchar_t wctmp[1];   /* stores a single decoded wide character */
-    int wclen;          /* size in bytes of current wide character */
+    ucs4_t wctmp[1];   /* stores a single decoded wide character */
+    int uclen;          /* size in bytes of current wide character */
 #endif
     int wcbuflen = -2; /* this never changes if UTF8_SUPPORT is disabled */
 
@@ -4061,7 +4067,7 @@ process_input(struct descriptor_data *d)
             wcbuflen = 0;
         }
     } else {
-        wcbuflen = d->raw_input_wclen;
+        wcbuflen = d->raw_input_uclen;
 #endif
     }
     p = d->raw_input_at;
@@ -4125,7 +4131,7 @@ process_input(struct descriptor_data *d)
                  * up overwriting the initial backslash it allows into the
                  * buffer if a complete escape sequence is detected.
                  *
-                 * q, p, len, and wclen may be overwritten by this function call. */
+                 * q, p, len, and uclen may be overwritten by this function call. */
             } else if ((*q == '\t') && DR_RAW_FLAGS(d, DF_TELNET)) {
                 *p++ = ' ';
 #ifdef UTF8_SUPPORT
@@ -4165,32 +4171,32 @@ process_input(struct descriptor_data *d)
                     }
 #ifdef UTF8_SUPPORT
                 } else if (d->encoding == ENC_UTF8) {
-                    wclen = mbtowc(wctmp, q, qend - q);
+                    uclen = u8_mbtouc(wctmp, (uint8_t *)q, qend - q);
 
                     /* TODO: Consider filtering private use and block specifier
                      * (annotations, bidi) codes from user input... */
 
-                    if (wclen > 0) {
+                    if (uclen > 0) {
                         /* check for overrun */
-                        if (p + (wclen-1) < pend) {
+                        if (p + (uclen-1) < pend) {
                             /* copy the multi-byte character to the buffer */
-                            memcpy(p, q, wclen);
-                            p = p + wclen;
-                            /* advance q by wclen-1 bytes. we subtract 1 because
+                            memcpy(p, q, uclen);
+                            p = p + uclen;
+                            /* advance q by uclen-1 bytes. we subtract 1 because
                              * the loop itself already advances it by 1. */
-                            q = q + (wclen - 1);
+                            q = q + (uclen - 1);
                             wcbuflen++;
                         } else {
                             /* d->raw_input can't hold the next UTF-8 character.
                              * Deleting characters during conversion when we
                              * have buffer space violates TR36 (3.5), so we need
                              * to replace it with at least one character. We'll
-                             * set wclen to -1 and let the error handling code
+                             * set uclen to -1 and let the error handling code
                              * take over. */
-                            wclen = -1;
+                            uclen = -1;
                         }
                     }
-                    if (wclen == -1) {
+                    if (uclen == -1) {
                         /* Invalid byte, insert U+FFFD (unknown) if we have the
                          * buffer space. */
                         if (p + 2 < pend) {
@@ -4217,14 +4223,14 @@ process_input(struct descriptor_data *d)
     if (p > d->raw_input) {
         d->raw_input_at = p;
 #ifdef UTF8_SUPPORT
-        d->raw_input_wclen = wcbuflen;
+        d->raw_input_uclen = wcbuflen;
 #endif
     } else {
         FREE(d->raw_input);
         d->raw_input = 0;
         d->raw_input_at = 0;
 #ifdef UTF8_SUPPORT
-        d->raw_input_wclen = 0;
+        d->raw_input_uclen = 0;
 #endif
     }
     return 1;
@@ -4404,9 +4410,9 @@ do_command(struct descriptor_data *d, struct text_block *t)
 
     int len = t->nchars;
 #ifdef UTF8_SUPPORT
-    int wclen = t->nwchars;
+    int uclen = t->nwchars;
 #else
-    int wclen = -1;
+    int uclen = -1;
 #endif
     char *command = t->start;
 
@@ -4440,7 +4446,7 @@ do_command(struct descriptor_data *d, struct text_block *t)
                 anotify(d->player, CINFO "Foreground program aborted.");
                 if ((FLAGS(d->player) & INTERACTIVE))
                     if ((FLAGS(d->player) & READMODE))
-                        process_command(d->descriptor, d->player, command, len, wclen);
+                        process_command(d->descriptor, d->player, command, len, uclen);
                 if (d->output_suffix) {
                     queue_ansi(d, d->output_suffix);
                     queue_write(d, "\r\n", 2);
@@ -4520,14 +4526,14 @@ do_command(struct descriptor_data *d, struct text_block *t)
                 queue_ansi(d, d->output_prefix);
                 queue_write(d, "\r\n", 2);
             }
-            process_command(d->descriptor, d->player, command, len, wclen);
+            process_command(d->descriptor, d->player, command, len, uclen);
             if (d->output_suffix) {
                 queue_ansi(d, d->output_suffix);
                 queue_write(d, "\r\n", 2);
             }
         } else {
             if (d->interactive == 2) {
-                handle_read_event(d->descriptor, NOTHING, command, NULL, len, wclen);
+                handle_read_event(d->descriptor, NOTHING, command, NULL, len, uclen);
             } else {
                 check_connect(d, command);
             }
@@ -5434,8 +5440,8 @@ dump_users(struct descriptor_data *d, char *user)
                 }
             }
             strcpy(buf, "");
-            sprintf(plyrbuf, "%-*s", (int)PLAYER_NAME_LIMIT + (wizwho ? 5 : 1),
-                    plyrbuf);
+            //TEST: sprintf(plyrbuf, "%-*s", (int)PLAYER_NAME_LIMIT + (wizwho ? 5 : 1),
+            //        plyrbuf);
             switch (wizwho) {
                 case 0:{
                     if (tp_who_doing) {

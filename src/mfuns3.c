@@ -54,7 +54,7 @@ stopmidi(dbref player)
     static char buf[BUFFER_LEN];
 
     if (FLAG2(player) & F2PUEBLO) {
-        sprintf(buf, "<img xch_sound=stop device=midi>");
+        strcpy(buf, "<img xch_sound=stop device=midi>");
     }
     return (buf);
 }

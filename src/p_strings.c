@@ -1801,13 +1801,13 @@ prim_unparseobj(PRIM_PROTOTYPE)
         result = oper1->data.objref;
         switch (result) {
             case NOTHING:
-                sprintf(buf, "*NOTHING*");
+                strcpy(buf, "*NOTHING*");
                 break;
             case HOME:
-                sprintf(buf, "*HOME*");
+                strcpy(buf, "*HOME*");
                 break;
             case NIL:
-                sprintf(buf, "*NIL*");
+                strcpy(buf, "*NIL*");
                 break;
             default:
                 if (result < 0 || result >= db_top)

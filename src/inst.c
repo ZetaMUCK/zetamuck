@@ -100,7 +100,7 @@ insttotext(struct frame *fr, int lev, struct inst *theinst, char *buffer,
                 strcat(buffer, "\"_");
             break;
         case PROG_MARK:
-            sprintf(buffer, "MARK");
+            strcpy(buffer, "MARK");
             break;
         case PROG_ARRAY:
             if (!theinst->data.array) {

@@ -9,6 +9,12 @@
 #endif
 
 #ifdef UTF8_SUPPORT
+# include <unitypes.h>
+# include <unistr.h>
+# include <unistring/cdefs.h>
+# include <unistring/inline.h>
+# include <unistring/stdbool.h>
+# include <unistdio.h>
 # include <locale.h>
 # include <wchar.h>
 # include <wctype.h>
@@ -26,12 +32,6 @@
 #  error "USE_SSL defined but ssh.h not found. Make sure you used the --with-ssl configure option."
 # endif
 #endif
-
-extern int printfdbg(int rarg);
-#define printf(...) (printfdbg(printf(__VA_ARGS__)))
-#define fprintf(...) (printfdbg(fprintf(__VA_ARGS__)))
-#define sprintf(...) (printfdbg(sprintf(__VA_ARGS__)))
-#define snprintf(...) (printfdbg(snprintf(__VA_ARGS__)))
 
 #define STRINGIFY(s) _STRINGIFY(s)
 #define _STRINGIFY(s) #s
@@ -58,8 +58,10 @@ extern int printfdbg(int rarg);
 
 /* Unicode noncharacters. These function as internal escapes inside of character
  * arrays, and should not be accepted from descriptor or file input. They can
- * be sent to a descriptor with queue writing functions, but will  Do _not_
- * confuse these characters in the Private Use Space.
+ * be sent to a descriptor with queue writing functions, and will modify the
+ * behavior for how the rest of that queued string is interpreted. Do _not_
+ * confuse these characters with ones in the Private Use Space, which
+ * is passthrough.
  *
  * The contiguous noncharacters stop at 0xFDEF. 0xFDF0 is a real character.
  *
@@ -212,7 +214,7 @@ struct descriptor_data {
     char                    *raw_input;
     char                    *raw_input_at;
 #ifdef UTF8_SUPPORT
-    int                      raw_input_wclen; /* number of wide characters present in raw_input */
+    int                      raw_input_uclen; /* number of wide characters present in raw_input */
 #endif
     int                      inIAC;         /* Used for telnet negotiation */
     int                      truncate;      /* cease appending to d->raw_input until \n is reached */
@@ -368,7 +370,7 @@ extern void anotify_descriptor(int descr, const char *msg);
 extern int anotify(dbref player, const char *msg);
 extern int notify_html(dbref player, const char *msg);
 extern int sockwrite(struct descriptor_data *d, const char *str, int len);
-extern void add_to_queue(struct text_queue *q, const char *b, int len, int wclen); /* hinoserm */
+extern void add_to_queue(struct text_queue *q, const char *b, int len, int uclen); /* hinoserm */
 extern int queue_write(struct descriptor_data *d, const char *b, int n);  /* hinoserm */
 extern int queue_ansi(struct descriptor_data *d, const char *msg);
 extern int queue_string(struct descriptor_data *d, const char *s);
@@ -417,7 +419,7 @@ extern char *pipnum(int c);
 extern char *pport(int c);
 extern void make_nonblocking(int s);
 extern void make_blocking(int s);
-extern int save_command(struct descriptor_data *d, char *command, int len, int wclen);
+extern int save_command(struct descriptor_data *d, char *command, int len, int uclen);
 extern char *time_format_2(time_t dt);
 extern int msec_diff(struct timeval now, struct timeval then);
 extern void pboot(int c);
@@ -474,7 +476,7 @@ extern long descr_sendfile(struct descriptor_data *d, int start, int stop, const
 
 /* the following symbols are provided by game.c */
 
-extern void process_command(int descr, dbref player, char *command, int len, int wclen);
+extern void process_command(int descr, dbref player, char *command, int len, int uclen);
 
 extern dbref create_player(dbref creator, const char *name, const char *password);
 extern dbref connect_player(const char *name, const char *password);

@@ -105,7 +105,7 @@ prim_force(PRIM_PROTOTYPE)
 {
     int nFrameIndex = -1; /* -1 means it hasn't been set */
     int nCurFr = 0; /* Loop iterator */
-    int wclen = -2;
+    int uclen = -2;
     int len;
     /* d s -- */
     CHECKOP(2);
@@ -134,7 +134,7 @@ prim_force(PRIM_PROTOTYPE)
     strcpy(buf, oper1->data.string->data);
     len = oper1->data.string->length;
 #ifdef UTF8_SUPPORT
-    wclen = oper1->data.string->wclength;
+    uclen = oper1->data.string->uclength;
 #endif
     CLEAR(oper1);
     CLEAR(oper2);
@@ -161,7 +161,7 @@ prim_force(PRIM_PROTOTYPE)
 
     fr->level++;
     interp_set_depth(fr);
-    process_command(dbref_first_descr(ref), ref, buf, len, wclen);
+    process_command(dbref_first_descr(ref), ref, buf, len, uclen);
     fr->level--;
     interp_set_depth(fr);
     force_level--;

@@ -43,6 +43,10 @@
 #endif
 #include "dbsearch.h"
 
+#ifdef UTF8_SUPPORT
+# include <unitypes.h>
+#endif
+
 /* Prototypes for externs not defined elsewhere */
 
 extern char match_args[];
@@ -118,7 +122,7 @@ extern stk_array *get_pids(dbref ref);
 extern stk_array *get_pidinfo(int pid);
 extern int scan_instances(dbref program);
 extern void handle_read_event(int descr, dbref player, const char *command,
-                              struct timenode *event, int len, int wclen);
+                              struct timenode *event, int len, int uclen);
 extern int add_muf_read_event(int descr, dbref player, dbref prog,
                               struct frame *fr);
 extern int add_muf_tread_event(int descr, dbref player, dbref prog,
@@ -448,8 +452,8 @@ extern char *tct(const char *in, char out[BUFFER_LEN]);
 extern char *strip_ansi(char *buf, const char *input);
 extern char *strip_bad_ansi(char *buf, const char *input);
 extern int  init_color_hash();
-extern unsigned char utf8_sbc_remap(int enc, wchar_t codepoint);
-extern bool isnc(wchar_t wchar);
+extern unsigned char utf8_sbc_remap(int enc, ucs4_t codepoint);
+extern bool isnc(ucs4_t uchar);
 extern char *strip_256_ansi(char *buf, const char *input);
 extern char *escape_ansi(char *buf, const char *input);
 extern char *parse_mush_ansi(char *buf, char *from);
@@ -546,7 +550,7 @@ extern void init_compress(void);
 extern const char *puncompress(const char *);
 
 /* From edit.c */
-extern void interactive(int descr, dbref player, const char *command, int len, int wclen);
+extern void interactive(int descr, dbref player, const char *command, int len, int uclen);
 
 /* From compile.c */
 /* extern void kill_def(const char *defname); */

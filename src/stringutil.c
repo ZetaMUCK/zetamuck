@@ -7,7 +7,7 @@
 #include "interface.h"
 #include "interp.h"
 #ifdef UTF8_SUPPORT
-#include "iconv.h"
+# include "iconv.h"
 #endif
 
 /* String utilities */
@@ -23,13 +23,8 @@ static hash_tab color_list[COLOR_HASH_SIZE];
                         (enc == ENC_LATIN1 ? y : \
                          (enc == ENC_IBM437 ? z : 0 )))
 #define LATIN1MAP(x,y) case x: return CHARMAP(y,x,y);
-#define UTF8_START(x) utf8_hex[(unsigned char)*x]
-#define UTF8_CONT2(x) utf8_hex[(unsigned char)*(x + 1)]
-#define UTF8_CONT3(x) utf8_hex[(unsigned char)*(x + 1)] + utf8_hex[(unsigned char)*(x + 2)]
-#define UTF8_CONT4(x) utf8_hex[(unsigned char)*(x + 1)] + utf8_hex[(unsigned char)*(x + 2)] + \
-                      utf8_hex[(unsigned char)*(x + 3)]
 
-unsigned char utf8_sbc_remap(int enc, wchar_t codepoint) {
+unsigned char utf8_sbc_remap(int enc, ucs4_t codepoint) {
     /*
     if ((unsigned char)*in >= 0xF0 && maxbytes >= 4) {
         codepoint = UTF8_START(in) + UTF8_CONT4(in);
@@ -459,9 +454,9 @@ unsigned char utf8_sbc_remap(int enc, wchar_t codepoint) {
     return 0;
 }
 
-bool isnc(wchar_t wchar)
+bool isnc(ucs4_t uchar)
 {
-    switch (wchar) {
+    switch (uchar) {
         case 0xFDD0:
         case 0xFDD1:
         case 0xFDD2:
@@ -1589,21 +1584,21 @@ alloc_string(const char *string)
  * alloc_prog_string unless you're passing in low-level I/O or something that
  * is similarly specialized, and verify your math in a C debugger before commit.
  *
- * wclength is directly assigned. -2 means unknown length, -1 is a UTF-8 coding
+ * uclength is directly assigned. -2 means unknown length, -1 is a UTF-8 coding
  * convetion indicates that the string contains invalid multi-byte characters.
  * Use -2 if you don't know what a "wide character" is and it'll work just fine.
- * We do not calculate wclength automatically for the user; this is done on
- * demand inside of the "wclength" function when the stored value is -2.
+ * We do not calculate uclength automatically for the user; this is done on
+ * demand inside of the "uclength" function when the stored value is -2.
  *
  * length is automatically caulcuated with strlen if the passed in value is <0,
- * but -2 is preferred because it matches the meaning of wclength. Use -2 unless
+ * but -2 is preferred because it matches the meaning of uclength. Use -2 unless
  * you're absolutely sure that your string match is accurate. (or better yet,
  * stick to using the alloc_prog_string(x) macro)
  *
  * Direct hate mail at brevantes.
  */
 struct shared_string *
-alloc_prog_string_exact(const char *s, int length, int wclength)
+alloc_prog_string_exact(const char *s, int length, int uclength)
 {
     struct shared_string *ss;
 
@@ -1621,7 +1616,7 @@ alloc_prog_string_exact(const char *s, int length, int wclength)
     ss->links = 1;
     ss->length = length;
 #ifdef UTF8_SUPPORT
-    ss->wclength = wclength;
+    ss->uclength = uclength;
 #endif
     bcopy(s, ss->data, ss->length + 1);
     return (ss);
@@ -2997,11 +2992,11 @@ int strnatcasecmp(nat_char const *a, nat_char const *b) {
 int
 wcharlen(struct shared_string *ss)
 {
-    if (ss->wclength == -2) {
+    if (ss->uclength == -2) {
         /* -2 is uninitialized. */
-        ss->wclength = mbstowcs(NULL, DoNullInd(ss), 0);
+        ss->uclength = mbstowcs(NULL, DoNullInd(ss), 0);
     }
-    return ss->wclength;
+    return ss->uclength;
 }
 
 
