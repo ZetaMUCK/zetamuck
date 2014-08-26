@@ -214,17 +214,17 @@ get_list_item(dbref player, dbref what, dbref perms, const char *listname,
     char buf[BUFFER_LEN];
     const char *ptr;
 
-    sprintf(buf, "%.512s#/%d", listname, itemnum);
+    SPRINTF(buf, "%.512s#/%d", "%.512U#/%d", listname, itemnum);
     ptr = safegetprop(player, what, perms, buf);
     if (!ptr || *ptr)
         return ptr;
 
-    sprintf(buf, "%.512s/%d", listname, itemnum);
+    SPRINTF(buf, "%.512s/%d", "%.512U/%d", listname, itemnum);
     ptr = safegetprop(player, what, perms, buf);
     if (!ptr || *ptr)
         return ptr;
 
-    sprintf(buf, "%.512s%d", listname, itemnum);
+    SPRINTF(buf, "%.512s%d", "%.512U%d", listname, itemnum);
     return (safegetprop(player, what, perms, buf));
 }
 
@@ -235,12 +235,12 @@ get_list_count(dbref player, dbref obj, dbref perms, const char *listname)
     const char *ptr;
     int i;
 
-    sprintf(buf, "%.512s#", listname);
+    SPRINTF(buf, "%.512s#", "%.512U#", listname);
     ptr = safegetprop(player, obj, perms, buf);
     if (ptr && *ptr)
         return (atoi(ptr));
 
-    sprintf(buf, "%.512s/#", listname);
+    SPRINTF(buf, "%.512s/#", "%.512U/#", listname);
     ptr = safegetprop(player, obj, perms, buf);
     if (ptr && *ptr)
         return (atoi(ptr));
@@ -951,23 +951,23 @@ mesg_parse(int descr, dbref player, dbref what, dbref perms, const char *inbuf,
                         if (mesgtyp & MPI_ISDEBUG) {
                             char *zptr = get_mvar("how");
 
-                            sprintf(dbuf, "%s %*s%c%s%c", zptr,
+                            SPRINTF(dbuf, "%s %*s%c%s%c", "%U %*U%c%U%c", zptr,
                                     (mesg_rec_cnt * 2 - 4), "", MFUN_LEADCHAR,
                                     (varflag ? cmdbuf : mfun_list[s].name),
                                     MFUN_ARGSTART);
                             for (i = (varflag ? 1 : 0); i < argc; i++) {
                                 if (i)
-                                    sprintf(dbuf, "%.512s%c ", dbuf,
+                                    SPRINTF(dbuf, "%.512s%c ", "%.512U%c ", dbuf,
                                             MFUN_ARGSEP);
 
                                 cr2slash(ebuf, argv[i]);
                                 if (strlen(ebuf) > 512)
-                                    sprintf(dbuf, "%.512s\"%.512s...\"", dbuf,
+                                    SPRINTF(dbuf, "%.512s\"%.512s...\"", "%.512U\"%.512U...\"", dbuf,
                                             ebuf);
                                 else
-                                    sprintf(dbuf, "%.512s\"%s\"", dbuf, ebuf);
+                                    SPRINTF(dbuf, "%.512s\"%s\"", "%.512U\"%U\"", dbuf, ebuf);
                             }
-                            sprintf(dbuf, "%.512s%c", dbuf, MFUN_ARGEND);
+                            SPRINTF(dbuf, "%.512s%c", "%.512U%c", dbuf, MFUN_ARGEND);
                             smnotify(descr, player, dbuf);
                         }
                         if (mfun_list[s].stripp)
@@ -992,22 +992,24 @@ mesg_parse(int descr, dbref player, dbref what, dbref perms, const char *inbuf,
                         if (mesgtyp & MPI_ISDEBUG) {
                             char *zptr = get_mvar("how");
 
-                            sprintf(dbuf, "%.512s %*s%c%.512s%c", zptr,
+                            SPRINTF(dbuf, "%.512s %*s%c%.512s%c", "%.512U %*U%c%.512U%c", zptr,
                                     (mesg_rec_cnt * 2 - 4), "", MFUN_LEADCHAR,
                                     (varflag ? cmdbuf : mfun_list[s].name),
                                     MFUN_ARGSTART);
 
                             for (i = (varflag ? 1 : 0); i < argc; i++) {
                                 if (i)
-                                    sprintf(dbuf, "%.512s%c ", dbuf,
+                                    SPRINTF(dbuf, "%.512s%c ", "%.512U%c ", dbuf,
                                             MFUN_ARGSEP);
 
                                 cr2slash(ebuf, argv[i]);
                                 if (strlen(ebuf) > 128)
-                                    sprintf(dbuf, "%.512s\"%.128s...\"", dbuf,
-                                            ebuf);
+                                    SPRINTF(dbuf,
+                                            "%.512s\"%.128s...\"", "%.512U\"%.128U...\"",
+                                            dbuf, ebuf);
                                 else
-                                    sprintf(dbuf, "%.512s\"%s\"", dbuf, ebuf);
+                                    SPRINTF(dbuf, "%.512s\"%s\"", "%.512U\"%U\"",
+                                            dbuf, ebuf);
                             }
                             sprintf(dbuf, "%s%c", dbuf, MFUN_ARGEND);
                         }
@@ -1058,8 +1060,8 @@ mesg_parse(int descr, dbref player, dbref what, dbref perms, const char *inbuf,
                             }
                         }
                         if (mesgtyp & MPI_ISDEBUG) {
-                            sprintf(dbuf, "%.512s = \"%.512s\"", dbuf,
-                                    cr2slash(ebuf, ptr));
+                            SPRINTF(dbuf, "%.512s = \"%.512s\"", "%.512U = \"%.512U\"",
+                                    dbuf, cr2slash(ebuf, ptr));
                             smnotify(descr, player, dbuf);
                         }
                     } else if (msg_is_macro(player, what, perms, cmdbuf)) {
@@ -1125,8 +1127,8 @@ mesg_parse(int descr, dbref player, dbref what, dbref perms, const char *inbuf,
     if ((mesgtyp & MPI_ISDEBUG) && showtextflag) {
         char *zptr = get_mvar("how");
 
-        sprintf(dbuf, "%s %*s\"%s\"", zptr, (mesg_rec_cnt * 2 - 4), "",
-                cr2slash(buf2, outbuf));
+        SPRINTF(dbuf, "%s %*s\"%s\"", "%U %*U\"%U\"",
+                zptr, (mesg_rec_cnt * 2 - 4), "", cr2slash(buf2, outbuf));
         smnotify(descr, player, dbuf);
     }
     mesg_rec_cnt--;

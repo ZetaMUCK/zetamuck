@@ -1273,6 +1273,7 @@ notify_nolisten(dbref player, const char *msg, int isprivate)
     int *darr;
     int di;
     int dcount;
+    int bufspace = 0;
 
     if (player < 0)
         return retval;          /* no one to notify */
@@ -1325,13 +1326,13 @@ notify_nolisten(dbref player, const char *msg, int isprivate)
                         }
                         if (!prefix || !*prefix) {
                             prefix = NAME(player);
-                            sprintf(buf2, "%s> %.*s", prefix,
-                                    (int) (BUFFER_LEN - (strlen(prefix) + 3)),
-                                    buf);
+                            bufspace = (int) (BUFFER_LEN - (strlen(prefix) + 3));
+                            SNPRINTF(buf2, BUFFER_LEN, "%s> %.*s", "%U> %.*U",
+                                    prefix, bufspace, buf);
                         } else {
-                            sprintf(buf2, "%s %.*s", prefix,
-                                    (int) (BUFFER_LEN - (strlen(prefix) + 2)),
-                                    buf);
+                            bufspace = (int) (BUFFER_LEN - (strlen(prefix) + 2));
+                            SNPRINTF(buf2, BUFFER_LEN, "%s %.*s", "%U %.*U",
+                                    prefix, bufspace, buf);
                         }
                         darr = get_player_descrs(OWNER(player), &dcount);
 
@@ -1368,6 +1369,7 @@ notify_html_nolisten(dbref player, const char *msg, int isprivate)
     int *darr;
     int di;
     int dcount;
+    int bufspace = 0;
 
     if (player < 0)
         return retval;          /* no one to notify */
@@ -1423,13 +1425,13 @@ notify_html_nolisten(dbref player, const char *msg, int isprivate)
                         }
                         if (!prefix || !*prefix) {
                             prefix = NAME(player);
-                            sprintf(buf2, "%s> %.*s", prefix,
-                                    (int) (BUFFER_LEN - (strlen(prefix) + 3)),
-                                    buf);
+                            bufspace = (int) (BUFFER_LEN - (strlen(prefix) + 3));
+                            SNPRINTF(buf2, BUFFER_LEN, "%s> %.*s", "%U> %.*U",
+                                    prefix, bufspace, buf);
                         } else {
-                            sprintf(buf2, "%s %.*s", prefix,
-                                    (int) (BUFFER_LEN - (strlen(prefix) + 2)),
-                                    buf);
+                            bufspace = (int) (BUFFER_LEN - (strlen(prefix) + 2));
+                            SNPRINTF(buf2, BUFFER_LEN, "%s %.*s", "%U %.*U",
+                                    prefix, bufspace, buf);
                         }
                         darr = get_player_descrs(OWNER(player), &dcount);
 
@@ -5304,11 +5306,6 @@ dump_users(struct descriptor_data *d, char *user)
     while (*user && isspace(*user))
         user++;
 
-    /* I must apologize for the absurd logical check below 
-     * In fixing EXPANDED_WHO, I didn't feel like rewriting
-     * the already badly done logic check.
-     */
-    /* Rewrote the badly done logic check. -Hinoserm */
     if (!d->connected || !OkObj(d->player)
         || (!Mage(d->player) && !(POWERS(d->player) & POW_EXPANDED_WHO)))
         wizwho = 0;
@@ -5320,9 +5317,10 @@ dump_users(struct descriptor_data *d, char *user)
 
     if (!wizwho && tp_who_doing) {
         if ((p = get_property_class((dbref) 0, "_poll"))) {
-            sprintf(dobuf, "%-43s", p);
+            SPRINTF(dobuf, "%-43s", "%-43U", p);
         } else {
-            sprintf(dobuf, "%-43s", "Doing...");
+            // sprintf(dobuf, "%-43s", "Doing...");
+            strcpy(dobuf, "Doing...");
         }
     }
     sprintf(plyrbuf, "%-*s", (int)PLAYER_NAME_LIMIT + 6, "Player Name");
@@ -5440,12 +5438,13 @@ dump_users(struct descriptor_data *d, char *user)
                 }
             }
             strcpy(buf, "");
-            //TEST: sprintf(plyrbuf, "%-*s", (int)PLAYER_NAME_LIMIT + (wizwho ? 5 : 1),
-            //        plyrbuf);
+            SPRINTF(plyrbuf, "%-*s", "%-*U",
+                    (int)PLAYER_NAME_LIMIT + (wizwho ? 5 : 1), plyrbuf);
             switch (wizwho) {
                 case 0:{
                     if (tp_who_doing) {
-                        sprintf(buf, "%s%s %s%10s%s%s%4s%s %s%-.45s\r\n",
+                        SPRINTF(buf, "%s%s %s%10s%s%s%4s%s %s%-.45s\r\n",
+                                "%U%U %U%10U%U%U%4U%U %U%-.45U\r\n",
                                 SYSGREEN, plyrbuf, SYSPURPLE,
                                 time_format_1(current_systime -
                                               dlist->connected_at),
@@ -5465,7 +5464,8 @@ dump_users(struct descriptor_data *d, char *user)
                                                                    player) :
                                 "");
                     } else {
-                        sprintf(buf, "%s%s %s%10s%s%s%4s%s\r\n",
+                        SPRINTF(buf, "%s%s %s%10s%s%s%4s%s\r\n",
+                                "%U%U %U%10U%U%U%4U%U\r\n",
                                 SYSGREEN, plyrbuf, SYSPURPLE,
                                 time_format_1(current_systime -
                                               dlist->connected_at),
@@ -5484,7 +5484,9 @@ dump_users(struct descriptor_data *d, char *user)
                     break;
                 }
                 case 1:{
-                    sprintf(buf, "%s%-3d %s%s%s%5d %s%9s%s%s%4s%s%s%s%s%s\r\n",
+                    SPRINTF(buf,
+                            "%s%-3d %s%s%s%5d %s%9s%s%s%4s%s%s%s%s%s\r\n",
+                            "%U%-3d %U%U%U%5d %U%9U%U%U%4U%U%U%U%U%U\r\n",
                             SYSRED, dlist->descriptor, SYSGREEN, plyrbuf,
                             SYSCYAN, dlist->cport, SYSPURPLE,
                             time_format_1(current_systime -
@@ -5596,7 +5598,8 @@ announce_puppets(dbref player, const char *msg, const char *prop)
                     msg2 = msg;
                     if ((ptr = (char *) get_property_class(what, prop)) && *ptr)
                         msg2 = ptr;
-                    sprintf(buf, CMOVE "%.512s %.3000s", PNAME(what), msg2);
+                    SPRINTF(buf, CMOVE "%.512s %.3000s", "%.512U %.3000U",
+                            PNAME(what), msg2);
                     anotify_except(DBFETCH(where)->contents, what, buf, what);
                 }
             }

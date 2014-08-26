@@ -320,7 +320,7 @@ notify_listeners(int descr, dbref who, dbref xprog, dbref obj,
                 }
                 if (!prefix || !*prefix)
                     prefix = "Outside>";
-                sprintf(buf, "%s %.*s", prefix,
+                SNPRINTF(buf, BUFFER_LEN, "%s %.*s", "%U %.*U", prefix,
                         (int) (BUFFER_LEN - 2 - strlen(prefix)), msg);
                 ref = DBFETCH(obj)->contents;
                 while (ref != NOTHING) {
@@ -437,7 +437,7 @@ ansi_notify_listeners(int descr, dbref who, dbref xprog, dbref obj,
                 }
                 if (!prefix || !*prefix)
                     prefix = "Outside>";
-                sprintf(buf, "%s %.*s", prefix,
+                SNPRINTF(buf, BUFFER_LEN, "%s %.*s", "%U %.*U", prefix,
                         (int) (BUFFER_LEN - 2 - strlen(prefix)), msg);
                 ref = DBFETCH(obj)->contents;
                 while (ref != NOTHING) {
@@ -554,7 +554,7 @@ notify_html_listeners(int descr, dbref who, dbref xprog, dbref obj,
                                            "(@Oecho)", pbuf, MPI_ISPRIVATE);
                 }                if (!prefix || !*prefix)
                     prefix = "Outside>";
-                sprintf(buf, "%s %.*s", prefix,
+                SNPRINTF(buf, BUFFER_LEN, "%s %.*s", "%U %.*U", prefix,
                         (int) (BUFFER_LEN - 2 - strlen(prefix)), msg);
                 ref = DBFETCH(obj)->contents;
                 while (ref != NOTHING) {

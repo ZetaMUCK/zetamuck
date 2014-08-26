@@ -932,7 +932,7 @@ prim_event_send(PRIM_PROTOTYPE)
         temp1.type = PROG_ARRAY;
         temp1.data.array = arr;
 
-        sprintf(buf, "USER.%.32s", DoNullInd(oper2->data.string));
+        SPRINTF(buf, "USER.%.32s", "USER.%.32U", DoNullInd(oper2->data.string));
         muf_event_add(destfr, buf, &temp1, 0);
         CLEAR(&temp1);
     }

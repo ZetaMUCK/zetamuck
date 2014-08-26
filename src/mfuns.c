@@ -30,8 +30,8 @@ mfn_func(MFUNARGS)
     for (i = 1; i < argc - 1; i++) {
         ptr = MesgParse(argv[i], argv[i]);
         CHECKRETURN(ptr, "FUNC", "variable name argument");
-        sprintf(buf, "{with:%.*s,{:%d},%.*s}", MAX_MFUN_NAME_LEN, ptr, i,
-                (BUFFER_LEN - MAX_MFUN_NAME_LEN - 20), def);
+        SNPRINTF(buf, BUFFER_LEN, "{with:%.*s,{:%d},%.*s}", "{with:%.*U,{:%d},%.*U}",
+                MAX_MFUN_NAME_LEN, ptr, i, (BUFFER_LEN - MAX_MFUN_NAME_LEN - 20), def);
         strcpy(def, buf);
     }
     i = new_mfunc(funcname, def);
@@ -1704,9 +1704,9 @@ mfn_ansi(MFUNARGS)
             Mageperms(what) ||
             (Typeof(what) == TYPE_EXIT && Typeof(getloc(what)) == TYPE_ROOM) ||
             string_prefix(argv[0], NAME(player))) {
-            sprintf(buf, "%.4093s", ptr);
+            SPRINTF(buf, "%.4093s", "%.4093U", ptr);
         } else {
-            sprintf(buf, "%s%.16s%s%.4078s",
+            SPRINTF(buf, "%s%.16s%s%.4078s", "%s%.16U%U%.4078U",
                     ((obj == OWNER(perms) || obj == player) ? "" : "> "),
                     NAME(player),
                     ((*argv[0] == '\'' || isspace(*argv[0])) ? "" : " "), ptr);
@@ -1747,9 +1747,9 @@ mfn_html(MFUNARGS)
             Mageperms(what) ||
             (Typeof(what) == TYPE_EXIT && Typeof(getloc(what)) == TYPE_ROOM) ||
             string_prefix(argv[0], NAME(player))) {
-            sprintf(buf, "%.4093s", ptr);
+            SPRINTF(buf, "%.4093s", "%.4093U", ptr);
         } else {
-            sprintf(buf, "%s%.16s%s%.4078s",
+            SPRINTF(buf, "%s%.16s%s%.4078s", "%s%.16U%U%.4078U",
                     ((obj == OWNER(perms) || obj == player) ? "" : "> "),
                     NAME(player),
                     ((*argv[0] == '\'' || isspace(*argv[0])) ? "" : " "), ptr);
@@ -1790,9 +1790,9 @@ mfn_tell(MFUNARGS)
             Mageperms(what) ||
             (Typeof(what) == TYPE_EXIT && Typeof(getloc(what)) == TYPE_ROOM) ||
             string_prefix(argv[0], NAME(player))) {
-            sprintf(buf, "%.4093s", ptr);
+            SPRINTF(buf, "%.4093s", "%.4093U", ptr);
         } else {
-            sprintf(buf, "%s%.16s%s%.4078s",
+            SPRINTF(buf, "%s%.16s%s%.4078s", "%U%.16U%U%.4078U",
                     ((obj == OWNER(perms) || obj == player) ? "" : "> "),
                     NAME(player),
                     ((*argv[0] == '\'' || isspace(*argv[0])) ? "" : " "), ptr);
@@ -1835,9 +1835,9 @@ mfn_telldescr(MFUNARGS)
             Mageperms(what) ||
             (Typeof(what) == TYPE_EXIT && Typeof(getloc(what)) == TYPE_ROOM) ||
             string_prefix(argv[0], NAME(player))) {
-            sprintf(buf, "%.4093s", ptr);
+            SPRINTF(buf, "%.4093s", "%.4093U", ptr);
         } else {
-            sprintf(buf, "%s%.16s%s%.4078s",
+            SPRINTF(buf, "%s%.16s%s%.4078s", "%U%.16U%U%.4078U",
                     ((obj == OWNER(perms) || obj == player) ? "" : "> "),
                     NAME(player),
                     ((*argv[0] == '\'' || isspace(*argv[0])) ? "" : " "), ptr);
@@ -1879,7 +1879,7 @@ mfn_otell(MFUNARGS)
             string_prefix(argv[0], NAME(player))) {
             strcpy(buf, ptr);
         } else {
-            sprintf(buf, "%.16s%s%.4078s", NAME(player),
+            SPRINTF(buf, "%.16s%s%.4078s", "%.16U%U%.4078U", NAME(player),
                     ((*argv[0] == '\'' || isspace(*argv[0])) ? "" : " "), ptr);
         }
         thing = DBFETCH(obj)->contents;
@@ -1925,7 +1925,7 @@ mfn_oansi(MFUNARGS)
             string_prefix(argv[0], NAME(player))) {
             strcpy(buf, ptr);
         } else {
-            sprintf(buf, "%.16s%s%.4078s", NAME(player),
+            SPRINTF(buf, "%.16s%s%.4078s", "%.16U%U%.4078U", NAME(player),
                     ((*argv[0] == '\'' || isspace(*argv[0])) ? "" : " "), ptr);
         }
         thing = DBFETCH(obj)->contents;
@@ -1971,7 +1971,7 @@ mfn_ohtml(MFUNARGS)
             string_prefix(argv[0], NAME(player))) {
             strcpy(buf, ptr);
         } else {
-            sprintf(buf, "%.16s%s%.4078s", NAME(player),
+            SPRINTF(buf, "%.16s%s%.4078s", "%.16U%U%.4078U", NAME(player),
                     ((*argv[0] == '\'' || isspace(*argv[0])) ? "" : " "), ptr);
         }
         thing = DBFETCH(obj)->contents;

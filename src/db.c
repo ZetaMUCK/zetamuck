@@ -2145,7 +2145,6 @@ db_hash_password(int type, char *out, const char *password, const char *saltin)
              * in many distros:
              *
              *  https://code.google.com/p/zetamuck/issues/detail?id=33 */
-            //sprintf(buf, "%.8s%s", salt, password);
             memcpy(buf, salt, 8);
             buf[8] = ':';
             strcpy(buf + 9, password);
@@ -2171,7 +2170,8 @@ db_hash_password(int type, char *out, const char *password, const char *saltin)
             sprintf(out, "%s:%s", db_hash_valtotag(type), buf);
             break;
         case HTYPE_MD5SALT:
-            sprintf(buf, "%.8s%s", salt, password);
+            memcpy(buf, salt, 8);
+            strcpy(buf + 8, password);
             MD5hex(buf, buf, strlen(password) + 8);
             sprintf(out, "%s:%s:%s", db_hash_valtotag(type), buf, sbuf);
             break;

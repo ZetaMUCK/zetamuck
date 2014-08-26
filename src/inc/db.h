@@ -649,6 +649,7 @@ struct muf_socket {             /* struct for MUF socket data */
    int ipv6;                    /* Defined if this socket is ipv6 */
    struct in6_addr *host6;      /* ipv6 host address */
 #endif
+   int encoding;                /* How to interpret strings */
 };
 
 struct muf_socket_queue {

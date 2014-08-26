@@ -425,7 +425,11 @@ do_motd(dbref player, char *text)
         return;
     }
     lt = current_systime;
+#ifdef UTF8_SUPPORT
+    log2file(MOTD_FILE, "%.16U", ctime(&lt));
+#else
     log2file(MOTD_FILE, "%.16s", ctime(&lt));
+#endif
     add_motd_text_fmt(text);
     log2file(MOTD_FILE, "- - - - - - - - - - - - - - - - - - - "
              "- - - - - - - - - - - - - - - - - - -");

@@ -1270,7 +1270,8 @@ pronoun_substitute(int descr, dbref player, const char *str)
                 mywhere = player;
                 d = (isupper(c)) ? c : toupper(c);
 
-                snprintf(globprop, sizeof(globprop), "_pronouns/%.64s/%s",
+                SNPRINTF(globprop, sizeof(globprop),
+                        "_pronouns/%.64s/%s", "_pronouns/%.64U/%U",
                          sexstr, prn);
                 if (d == 'A' || d == 'S' || d == 'O' || d == 'P' || d == 'R'
                     || d == 'N') {

@@ -852,7 +852,7 @@ gui_ctrl_make_v(const char *dlogid, const char *type, const char *pane,
     if (GuiSupported(descr)) {
         char cmdname[64];
 
-        sprintf(cmdname, "ctrl-%.55s", type);
+        SPRINTF(cmdname, "ctrl-%.55s", "ctrl-%.55U", type);
         mcp_mesg_init(&msg, GUI_PACKAGE, cmdname);
         gui_ctrl_process_layout(&msg, layout);
         mcp_mesg_arg_append(&msg, "dlogid", dlogid);
@@ -908,7 +908,7 @@ gui_ctrl_make_l(const char *dlogid, const char *type, const char *pane,
     if (GuiSupported(descr)) {
         char cmdname[64];
 
-        sprintf(cmdname, "ctrl-%.55s", type);
+        SPRINTF(cmdname, "ctrl-%.55s", "ctrl-%.55U", type);
         mcp_mesg_init(&msg, GUI_PACKAGE, cmdname);
         gui_ctrl_process_layout(&msg, layout);
         mcp_mesg_arg_append(&msg, "dlogid", dlogid);

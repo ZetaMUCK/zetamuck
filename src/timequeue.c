@@ -322,7 +322,7 @@ add_muf_timer_event(int descr, dbref player, dbref prog, struct frame *fr,
 {
     char buf[40];
 
-    sprintf(buf, "TIMER.%.32s", id);
+    SPRINTF(buf, "TIMER.%.32s", "TIMER.%.32U", id);
     fr->timercount++;
     return add_event(TQ_MUF_TYP, TQ_MUF_TIMER, delay, descr, player, -1,
                      fr->trig, prog, fr, buf, NULL, NULL);
@@ -612,7 +612,7 @@ next_timequeue_event(void)
                     char bbuf[BUFFER_LEN];
                     dbref plyr;
 
-                    sprintf(bbuf, ">> %.4000s %.*s",
+                    SPRINTF(bbuf, ">> %.4000s %.*s", ">> %.4000U %.*U",
                             NAME(event->uid),
                             (int) (4000 - strlen(NAME(event->uid))),
                             pronoun_substitute(event->descr, event->uid, cbuf));
@@ -778,7 +778,9 @@ list_events(dbref player)
             }
         }
         if (ptr->typ == TQ_MUF_TYP && ptr->subtyp == TQ_MUF_DELAY) {
-            (void) sprintf(buf, "%8d %4s %4s %5d %4.1f #%-6d %-16s %.512s",
+            (void) SPRINTF(buf,
+                           "%8d %4s %4s %5d %4.1f #%-6d %-16s %.512s",
+                           "%8d %4U %4U %5d %4.1f #%-6d %-16U %.512U",
                            ptr->eventnum, buf2,
                            time_format_2((long) etime),
                            (ptr->fr->instcnt / 1000), pcnt,
@@ -786,7 +788,9 @@ list_events(dbref player)
                            (OkObj(ptr->uid)) ? NAME(ptr->uid) : "(Login)",
                            ptr->called_data);
         } else if (ptr->typ == TQ_MUF_TYP && ptr->subtyp == TQ_MUF_READ) {
-            (void) sprintf(buf, "%8d %4s %4s %5d %4.1f #%-6d %-16s %.512s",
+            (void) SPRINTF(buf,
+                           "%8d %4s %4s %5d %4.1f #%-6d %-16s %.512s",
+                           "%8d %4U %4U %5d %4.1f #%-6d %-16U %.512U",
                            ptr->eventnum, "--",
                            time_format_2((long) etime),
                            (ptr->fr->instcnt / 1000), pcnt,
@@ -794,7 +798,9 @@ list_events(dbref player)
                            (OkObj(ptr->uid)) ? NAME(ptr->uid) : "(Login)",
                            ptr->called_data);
         } else if (ptr->typ == TQ_MUF_TYP && ptr->subtyp == TQ_MUF_TIMER) {
-            (void) sprintf(buf, "(%6d) %4s %4s %5d %4.1f #%-6d %-16s %.512s",
+            (void) SPRINTF(buf,
+                           "(%6d) %4s %4s %5d %4.1f #%-6d %-16s %.512s",
+                           "(%6d) %4U %4U %5d %4.1f #%-6d %-16U %.512U",
                            ptr->eventnum, buf2,
                            time_format_2((long) etime),
                            (ptr->fr->instcnt / 1000), pcnt,
@@ -803,7 +809,9 @@ list_events(dbref player)
                            ptr->called_data);
 
         } else if (ptr->typ == TQ_MUF_TYP && ptr->subtyp == TQ_MUF_TREAD) {
-            (void) sprintf(buf, "%8d %4s %4s %5d %4.1f #%-6d %-16s %.512s",
+            (void) SPRINTF(buf,
+                           "%8d %4s %4s %5d %4.1f #%-6d %-16s %.512s",
+                           "%8d %4U %4U %5d %4.1f #%-6d %-16U %.512U",
                            ptr->eventnum, buf2,
                            time_format_2((long) etime),
                            (ptr->fr->instcnt / 1000), pcnt,
@@ -811,13 +819,15 @@ list_events(dbref player)
                            (OkObj(ptr->uid)) ? NAME(ptr->uid) : "(Login)",
                            ptr->called_data);
         } else if (ptr->typ == TQ_MPI_TYP) {
-            (void) sprintf(buf,
+            (void) SPRINTF(buf,
                            "%8d %4s   --   MPI   -- #%-6d %-16s \"%.512s\"",
+                           "%8d %4U   --   MPI   -- #%-6d %-16U \"%.512U\"",
                            ptr->eventnum, buf2, ptr->trig, NAME(ptr->uid),
                            ptr->called_data);
         } else {
-            (void) sprintf(buf,
+            (void) SPRINTF(buf,
                            "%8d %4s   0s     0   -- #%-6d %-16s \"%.512s\"",
+                           "%8d %4U   0U     0   -- #%-6d %-16U \"%.512U\"",
                            ptr->eventnum, buf2, ptr->called_prog,
                            (OkObj(ptr->uid)) ? NAME(ptr->uid) : "(Login)",
                            ptr->called_data);
@@ -1199,7 +1209,7 @@ dequeue_timers(int pid, char *id)
         return 0;
 
     if (id)
-        sprintf(buf, "TIMER.%.30s", id);
+        SPRINTF(buf, "TIMER.%.30s", "TIMER.%.30U", id);
 
     tmp = ptr = tqhead;
     while (ptr) {
@@ -1448,7 +1458,7 @@ propqueue(int descr, dbref player, dbref where, dbref trigger, dbref what,
                             char bbuf[BUFFER_LEN];
                             dbref plyr;
 
-                            sprintf(bbuf, ">> %.4000s",
+                            SPRINTF(bbuf, ">> %.4000s", ">> %.4000U",
                                     pronoun_substitute(descr, player, cbuf));
                             plyr = DBFETCH(where)->contents;
                             while (plyr != NOTHING) {

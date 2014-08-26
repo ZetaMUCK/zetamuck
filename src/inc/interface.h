@@ -94,10 +94,36 @@
 #define NC_MXPAMP_UTF8   "\xEF\xB7\x95"
 #define NC_MXPQUOT_UTF8  "\xEF\xB7\x96"
 
+/* UCNESCAPED should be prefixed to format strings when it is desirable for
+ * non-Unicode descriptors to see Unicode escapes (\u00A1) instead of having
+ * the character be remapped to something else. This is useful in any context
+ * where the meaning of a character should be preserved, such as any output
+ * coming from the "examine" command.
+ *
+ * SPRINTF and SNPRINTF are macros that allow for proper column formatting
+ * regardless of whether support for UTF-8 is enabled. These macros take two
+ * format strings instead of one. Note that it is only necessary to use these
+ * macros when a format string is invoking arbitrary integer based precision.
+ *
+ * The first format string is used when UTF-8 support is not compiled in, and
+ * should rely on the old assumptions that 1 column = 1 byte. (%s)
+ *
+ * The second format string is used when UTF-8 support is available. In this
+ * scenario it's wrong to assume that there is a direct mapping between bytes
+ * and columns, so a different format string is required that knows how to map
+ * multibyte characters to column counts correctly. (%U) This format character
+ * is not available to glibc, hence the need for a discrete second string.
+ *
+ */
+
 #ifdef UTF8_SUPPORT
 # define UCNESCAPED NC_UCNSTART_UTF8
+# define SPRINTF(out, fmt1, fmt2, ...) u8_u8_sprintf((uint8_t *)out, (uint8_t *)fmt2, __VA_ARGS__)
+# define SNPRINTF(out, len, fmt1, fmt2, ...) u8_u8_snprintf((uint8_t *)out, len, (uint8_t *)fmt2, __VA_ARGS__)
 #else
 # define UCNESCAPED ""
+# define SPRINTF(out, fmt1, fmt2, ...) sprintf(out, fmt1, __VA_ARGS__)
+# define SNPRINTF(out, len, fmt1, fmt2, ...) sprintf(out, len, fmt1, __VA_ARGS__)
 #endif
 
 /* structures */

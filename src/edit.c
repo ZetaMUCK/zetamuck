@@ -139,12 +139,12 @@ do_list_tree(struct macrotable *node, const char *first, const char *last,
         if ((strncmp(node->name, first, strlen(first)) >= 0) &&
             (strncmp(node->name, last, strlen(last)) <= 0)) {
             if (length) {
-                sprintf(buf, "%-16s %-16s  %s", node->name,
+                SPRINTF(buf, "%-16s %-16s  %s", "%-16U %-16U  %U", node->name,
                         NAME(node->implementor), node->definition);
                 notify(player, buf);
                 buf[0] = '\0';
             } else {
-                sprintf(buf + strlen(buf), "%-16s", node->name);
+                SPRINTF(buf + strlen(buf), "%-16s", "%-16U", node->name);
                 if (strlen(buf) > 70) {
                     notify(player, buf);
                     buf[0] = '\0';

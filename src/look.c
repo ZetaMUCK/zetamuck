@@ -737,6 +737,7 @@ do_examine(int descr, dbref player, const char *name, const char *dir)
     dbref content;
     dbref exit;
     dbref ref_tm;
+    int bufspace = 0;
 
     struct tm *time_tm;         /* used for timestamps */
 
@@ -790,9 +791,12 @@ do_examine(int descr, dbref player, const char *name, const char *dir)
         return;
     }
     switch (Typeof(thing)) {
+        bufspace = (int) (BUFFER_LEN - strlen(NAME(OWNER(thing))) - 35);
         case TYPE_ROOM:
-            sprintf(buf, UCNESCAPED "%.*s" SYSNORMAL "  Owner: %s  Parent: ",
-                    (int) (BUFFER_LEN - strlen(NAME(OWNER(thing))) - 35),
+            SNPRINTF(buf, BUFFER_LEN,
+                    "%.*s" SYSNORMAL "  Owner: %s  Parent: ",
+                    UCNESCAPED "%.*U" SYSNORMAL "  Owner: %U  Parent: ",
+                    bufspace,
                     ansi_unparse_object(OWNER(player), thing),
                     NAME(OWNER(thing)));
             strcat(buf,
@@ -800,21 +804,27 @@ do_examine(int descr, dbref player, const char *name, const char *dir)
                                        DBFETCH(thing)->location));
             break;
         case TYPE_THING:
-            sprintf(buf, UCNESCAPED "%.*s" SYSNORMAL "  Owner: %s  Value: %d",
-                    (int) (BUFFER_LEN - strlen(NAME(OWNER(thing))) - 35),
+            SNPRINTF(buf, BUFFER_LEN,
+                    "%.*s" SYSNORMAL "  Owner: %s  Value: %d",
+                    UCNESCAPED "%.*U" SYSNORMAL "  Owner: %U  Value: %d",
+                    bufspace,
                     ansi_unparse_object(OWNER(player), thing),
                     NAME(OWNER(thing)), DBFETCH(thing)->sp.thing.value);
             break;
         case TYPE_PLAYER:
-            sprintf(buf, UCNESCAPED "%.*s" SYSNORMAL "  %s: %d  ",
-                    (int) (BUFFER_LEN - strlen(NAME(OWNER(thing))) - 35),
+            SNPRINTF(buf, BUFFER_LEN,
+                    "%.*s" SYSNORMAL "  %s: %d  ",
+                    UCNESCAPED "%.*U" SYSNORMAL "  %U: %d  ",
+                    bufspace,
                     ansi_unparse_object(OWNER(player), thing),
                     tp_cpennies, DBFETCH(thing)->sp.player.pennies);
             break;
         case TYPE_EXIT:
         case TYPE_PROGRAM:
-            sprintf(buf, UCNESCAPED "%.*s" SYSNORMAL "  Owner: %s",
-                    (int) (BUFFER_LEN - strlen(NAME(OWNER(thing))) - 35),
+            SPRINTF(buf,
+                    "%.*s" SYSNORMAL "  Owner: %s",
+                    UCNESCAPED "%.*U" SYSNORMAL "  Owner: %U",
+                    bufspace,
                     ansi_unparse_object(OWNER(player), thing),
                     NAME(OWNER(thing)));
             break;
@@ -1826,52 +1836,52 @@ display_objinfo(dbref player, dbref obj,
 
     switch (output_type) {
         case 1:                /* owners */
-            sprintf(buf, "%-38.512s  %.512s", buf2,
+            SPRINTF(buf, "%-38.512s  %.512s", "%-38.512U  %.512U", buf2,
                     ansi_unparse_object(player, OWNER(obj)));
             break;
         case 2:                /* links */
             switch (Typeof(obj)) {
                 case TYPE_ROOM:
-                    sprintf(buf, "%-38.512s  %.512s", buf2,
+                    SPRINTF(buf, "%-38.512s  %.512s", "%-38.512U  %.512U", buf2,
                             ansi_unparse_object(player,
                                                 DBFETCH(obj)->sp.room.dropto));
                     break;
                 case TYPE_EXIT:
                     if (DBFETCH(obj)->sp.exit.ndest == 0) {
-                        sprintf(buf, "%-38.512s  %.512s", buf2, "*UNLINKED*");
+                        SPRINTF(buf, "%-38.512s  *UNLINKED*", "%-38.512U  *UNLINKED*", buf2);
                         break;
                     }
                     if (DBFETCH(obj)->sp.exit.ndest > 1) {
-                        sprintf(buf, "%-38.512s  %.512s", buf2, "*METALINKED*");
+                        SPRINTF(buf, "%-38.512s  *METALINKED*", "%-38.512U  *METALINKED*", buf2);
                         break;
                     }
-                    sprintf(buf, "%-38.512s  %.512s", buf2,
+                    SPRINTF(buf, "%-38.512s  %.512s", "%-38.512U  %.512U", buf2,
                             ansi_unparse_object(player,
                                                 DBFETCH(obj)->sp.exit.dest[0]));
                     break;
                 case TYPE_PLAYER:
-                    sprintf(buf, "%-38.512s  %.512s", buf2,
+                    SPRINTF(buf, "%-38.512s  %.512s", "%-38.512U  %.512U", buf2,
                             ansi_unparse_object(player,
                                                 DBFETCH(obj)->sp.player.home));
                     break;
                 case TYPE_THING:
-                    sprintf(buf, "%-38.512s  %.512s", buf2,
+                    SPRINTF(buf, "%-38.512s  %.512s", "%-38.512U  %.512U", buf2,
                             ansi_unparse_object(player,
                                                 DBFETCH(obj)->sp.thing.home));
                     break;
                 default:
-                    sprintf(buf, "%-38.512s  %.512s", buf2, "N/A");
+                    SPRINTF(buf, "%-38.512s  N/A", "%-38.512U  N/A", buf2);
                     break;
             }
             break;
         case 3:                /* locations */
-            sprintf(buf, "%-38.512s  %.512s", buf2,
-                    ansi_unparse_object(player, DBFETCH(obj)->location));
+            SPRINTF(buf, "%-38.512s  %.512s", "%-38.512U  %.512U", buf2,
+                ansi_unparse_object(player, DBFETCH(obj)->location));
             break;
         case 4:
             return;
         case 5:
-            sprintf(buf, "%-38.512s  %d bytes.", buf2, size_object(obj, 0));
+            SPRINTF(buf, "%-38.512s  %d bytes.", "%-38.512U  %d bytes.", buf2, size_object(obj, 0));
             break;
         case 0:
         default:
@@ -2183,8 +2193,8 @@ exit_match_exists(dbref player, dbref obj, const char *name)
     exit = DBFETCH(obj)->exits;
     while (exit != NOTHING) {
         if (exit_matches_name(exit, name)) {
-            sprintf(buf, "  %ss are trapped on %.2048s",
-                    name, ansi_unparse_object(player, obj));
+            SPRINTF(buf, "  %ss are trapped on %.2048s", "  %Us are trapped on %.2048U",
+                name, ansi_unparse_object(player, obj));
             anotify_nolisten(player, buf, 1);
         }
         exit = DBFETCH(exit)->next;
@@ -2250,8 +2260,10 @@ do_sweep(int descr, dbref player, const char *name)
             case TYPE_THING:
                 if (FLAGS(ref) & (VEHICLE | ZOMBIE | LISTENER)) {
                     tellflag = 0;
-                    sprintf(buf, "  %.255s" NORMAL " is a",
-                            ansi_unparse_object(player, ref));
+                    SPRINTF(buf,
+                            "  %.255s" NORMAL " is a",
+                            "  %.255U" NORMAL " is a",
+                        ansi_unparse_object(player, ref));
                     if (FLAGS(ref) & ZOMBIE) {
                         tellflag = 1;
                         if (!online(OWNER(ref))) {

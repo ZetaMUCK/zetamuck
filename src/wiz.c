@@ -1293,7 +1293,8 @@ do_muf_funcprofs(dbref player, char *arg1)
 			if (Typeof(i) == TYPE_PROGRAM && DBFETCH(i)->sp.program.code && DBFETCH(i)->sp.program.fprofile) {
 				fpr = DBFETCH(i)->sp.program.fprofile;
 				while (fpr) {
-						sprintf(buf, "%30s %30s %f, %ld", unparse_object(player, i), fpr->funcname, fpr->totaltime, fpr->usecount);
+						SPRINTF(buf, "%30s %30s %f, %ld", "%30U %30U %f, %ld",
+                                unparse_object(player, i), fpr->funcname, fpr->totaltime, fpr->usecount);
 						anotify_nolisten2(player, buf);
 
 					fpr = fpr->next;
@@ -1704,9 +1705,9 @@ do_all_topprofs(dbref player, char *arg1)
                       CINFO "     %CPU   TotalTime  UseCount  Type  Object");
     while (tops) {
         curr = tops;
-        sprintf(buf, "%10.3f %10.3f %9ld%5s   %s", curr->pcnt, curr->proftime,
-                curr->usecount, curr->type ? "MUF" : "MPI",
-                unparse_object(player, curr->prog));
+        SPRINTF(buf, "%10.3f %10.3f %9ld%5s   %s", "%10.3f %10.3f %9ld%5U   %U",
+                curr->pcnt, curr->proftime, curr->usecount,
+                curr->type ? "MUF" : "MPI", unparse_object(player, curr->prog));
         notify(player, buf);
         tops = tops->next;
         free(curr);

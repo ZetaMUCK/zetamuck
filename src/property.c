@@ -827,13 +827,15 @@ displayprop(dbref player, dbref obj, const char *name, char *buf)
     propfetch(obj, p);
 #endif
     pdflag = (PropDir(p) != NULL);
-    sprintf(tbuf, UCNESCAPED "%.*s%c", (BUFFER_LEN / 4), name,
+    SPRINTF(tbuf, "%.*s%c", UCNESCAPED "%.*U%c", (BUFFER_LEN / 4), name,
             (pdflag) ? PROPDIR_DELIMITER : '\0');
     tct(tbuf, mybuf);
     switch (PropType(p)) {
         case PROP_STRTYP:
-            sprintf(buf, SYSAQUA "str " SYSGREEN "%s" SYSRED ":" SYSCYAN
-                    "%.*s", mybuf, (BUFFER_LEN / 2),
+            SPRINTF(buf,
+                    SYSAQUA "str " SYSGREEN "%s" SYSRED ":" SYSCYAN "%.*s",
+                    SYSAQUA "str " SYSGREEN "%U" SYSRED ":" SYSCYAN "%.*U",
+                    mybuf, (BUFFER_LEN / 2),
                     tct(PropDataUNCStr(p), tbuf));
             break;
         case PROP_REFTYP:
@@ -853,8 +855,10 @@ displayprop(dbref player, dbref obj, const char *name, char *buf)
                 sprintf(buf, SYSCRIMSON "lok " SYSGREEN "%s" SYSRED ":"
                         SYSPURPLE "*UNLOCKED*", mybuf);
             } else {
-                sprintf(buf, SYSCRIMSON "lok " SYSGREEN "%s" SYSRED ":"
-                        SYSPURPLE "%.*s", mybuf, (BUFFER_LEN / 2),
+                SPRINTF(buf,
+                        SYSCRIMSON "lok " SYSGREEN "%s" SYSRED ":" SYSPURPLE "%.*s",
+                        SYSCRIMSON "lok " SYSGREEN "%U" SYSRED ":" SYSPURPLE "%.*U",
+                        mybuf, (BUFFER_LEN / 2),
                         tct(unparse_boolexp(player, PropDataLok(p), 1), tbuf));
             }
             break;

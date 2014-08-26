@@ -2159,7 +2159,7 @@ prop_command(int descr, dbref player, const char *command, const char *arg,
 
                     dbref plyr;
 
-                    sprintf(bbuf, ">> %.4000s",
+                    SNPRINTF(bbuf, 4004, ">> %.4000s", ">> %.4000U",
                             pronoun_substitute(descr, player, cbuf));
                     plyr = DBFETCH(where)->contents;
                     while (plyr != NOTHING) {
