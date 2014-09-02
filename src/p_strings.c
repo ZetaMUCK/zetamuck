@@ -884,7 +884,37 @@ prim_strlen(PRIM_PROTOTYPE)
     if (!oper1->data.string)
         result = 0;
     else
+        result = oper1->data.string->columns;
+    CLEAR(oper1);
+    PushInt(result);
+}
+
+void
+prim_bytelen(PRIM_PROTOTYPE)
+{
+    CHECKOP(1);
+    oper1 = POP();
+    if (oper1->type != PROG_STRING)
+        abort_interp("Non-string argument.");
+    if (!oper1->data.string)
+        result = 0;
+    else
         result = oper1->data.string->length;
+    CLEAR(oper1);
+    PushInt(result);
+}
+
+void
+prim_mbslen(PRIM_PROTOTYPE)
+{
+    CHECKOP(1);
+    oper1 = POP();
+    if (oper1->type != PROG_STRING)
+        abort_interp("Non-string argument.");
+    if (!oper1->data.string)
+        result = 0;
+    else
+        result = oper1->data.string->mblength;
     CLEAR(oper1);
     PushInt(result);
 }

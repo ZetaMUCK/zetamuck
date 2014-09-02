@@ -914,7 +914,7 @@ extern void do_modunload(dbref player, char *arg);
 extern void do_modinfo(dbref player, char *arg);
 
 void
-process_command(int descr, dbref player, char *command, int len, int uclen)
+process_command(int descr, dbref player, char *command, int len, int mblength)
 {
     /* TODO: Now that initial string length is being passed in, most instances
      *       of strcpy could be converted to a faster memcpy. -brevantes */
@@ -980,7 +980,7 @@ process_command(int descr, dbref player, char *command, int len, int uclen)
     }
 
     if (FLAGS(player) & INTERACTIVE) {
-        interactive(descr, player, command, len, uclen);
+        interactive(descr, player, command, len, mblength);
         return;
     }
     /* eat leading whitespace */

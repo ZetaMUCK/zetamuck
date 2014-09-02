@@ -218,7 +218,7 @@ muf_backtrace(dbref player, dbref program, int count, struct frame *fr)
     char buf[BUFFER_LEN];
     char buf2[BUFFER_LEN];
     char buf3[BUFFER_LEN];
-    char *ptr;
+    char *ptr, *bufend;
     dbref ref;
     int i, j, cnt, flag;
     struct inst *pinst, *lastinst;
@@ -249,9 +249,9 @@ muf_backtrace(dbref player, dbref program, int count, struct frame *fr)
             notify_nolisten(player, buf, 1);
         }
         lev = fr->system.top - j;
+        bufend = buf2;
         if (ptr) {
             int k;
-            char *bufend = buf2;
             /* Use the function we're currently iterating over, *not* the
              * topmost one. -davin */
             //struct inst *fntop = fr->pc;
@@ -277,7 +277,7 @@ muf_backtrace(dbref player, dbref program, int count, struct frame *fr)
                              k ? SYSWHITE ", %s=" SYSNORMAL "%s" : SYSWHITE
                              "%s=" SYSNORMAL "%s", nam, val);
             }
-            bufend += strncpy(bufend, SYSWHITE ")" SYSNORMAL, buf2 - bufend - 1) - buf2;
+            snprintf(bufend, bufend - buf2 - 1, SYSWHITE ")" SYSNORMAL);
             ptr = buf2;
         }
 

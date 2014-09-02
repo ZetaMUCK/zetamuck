@@ -599,8 +599,11 @@ struct line {
 
 struct shared_string {		    /* for sharing strings in programs */
     int     links;		        /* number of pointers to this struct */
-    int     length;		        /* length of string data */
-    int     uclength;
+    int     length;		        /* byte length of string data (not counting null) */
+    int     mblength;           /* number of multi-byte characters (code points) */
+    int     columns;            /* count of visible characters (graphemes) */
+    bool    raw;                /* string comes from a raw source */
+    char    *grapheme_brks;     /* locations of grapheme breaks */
     char    data[1];		    /* shared string data */
 };
 
@@ -1123,7 +1126,7 @@ extern void log_program_text(struct line * first, dbref player, dbref i);
 /* alloc_prog_string is now a macro, works exactly the way it used to. */
 //extern struct shared_string *alloc_prog_string(const char *);
 #define alloc_prog_string(x) alloc_prog_string_exact(x, -2, -2)
-extern struct shared_string *alloc_prog_string_exact(const char *, int length, int uclength);
+extern struct shared_string *alloc_prog_string_exact(const char *, int length, int mblength);
 #endif
 
 extern dbref new_object(dbref player);	/* return a new object */

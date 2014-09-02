@@ -122,7 +122,7 @@ extern stk_array *get_pids(dbref ref);
 extern stk_array *get_pidinfo(int pid);
 extern int scan_instances(dbref program);
 extern void handle_read_event(int descr, dbref player, const char *command,
-                              struct timenode *event, int len, int uclen);
+                              struct timenode *event, int len, int mblength);
 extern int add_muf_read_event(int descr, dbref player, dbref prog,
                               struct frame *fr);
 extern int add_muf_tread_event(int descr, dbref player, dbref prog,
@@ -550,7 +550,7 @@ extern void init_compress(void);
 extern const char *puncompress(const char *);
 
 /* From edit.c */
-extern void interactive(int descr, dbref player, const char *command, int len, int uclen);
+extern void interactive(int descr, dbref player, const char *command, int len, int mblength);
 
 /* From compile.c */
 /* extern void kill_def(const char *defname); */

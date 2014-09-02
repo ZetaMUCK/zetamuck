@@ -2,10 +2,15 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.67])
-AC_INIT([FULL-PACKAGE-NAME], [VERSION], [BUG-REPORT-ADDRESS])
+AC_INIT([zetamuck], [0.9], [davin@wordpainter.net])
+AM_INIT_AUTOMAKE([foreign subdir-objects])
+# AM_SILENT_RULES([yes])
 AC_CONFIG_SRCDIR([smatch.c])
 AC_CONFIG_HEADERS([inc/autoconf.h])
 AC_USE_SYSTEM_EXTENSIONS
+
+# Change paths
+#AC_PREFIX_DEFAULT(..)
 
 # Checks for programs.
 AC_PROG_AWK
@@ -14,8 +19,10 @@ AC_PROG_MAKE_SET
 #AC_PROG_CXX
 AC_PROG_SED
 
+# Dependencies for gnulib provided macros
+m4_include([m4/gnulib.m4])
+
 # Checks for libraries.
-#
 m4_include([m4/libs.m4])
 
 # Checks for header files.
@@ -46,6 +53,7 @@ m4_include([m4/libfuncs.m4])
 m4_include([m4/features.m4])
 m4_include([m4/debug.m4])
 m4_include([m4/misc.m4])
+
 
 AC_CONFIG_FILES([Makefile])
 AC_OUTPUT

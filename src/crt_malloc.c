@@ -944,7 +944,7 @@ CrT_alloc_string(const char *string, const char *file, int line)
 }
 
 struct shared_string *
-CrT_alloc_prog_string(const char *s, const char *file, int line, int length, int uclength)
+CrT_alloc_prog_string(const char *s, const char *file, int line, int length, int mblength)
 {
     struct shared_string *ss;
 
@@ -959,7 +959,7 @@ CrT_alloc_prog_string(const char *s, const char *file, int line, int length, int
         abort();
     ss->links = 1;
     ss->length = length;
-    ss->uclength = uclength;
+    ss->mblength = mblength;
     bcopy(s, ss->data, ss->length + 1);
     return (ss);
 }

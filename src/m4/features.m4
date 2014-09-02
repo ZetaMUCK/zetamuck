@@ -59,6 +59,15 @@ if test "$enableval" != "no"; then
 fi
 ])
 
+dnl AC_ARG_ENABLE(unicode,
+dnl [  --enable-unicode           enable unicode],
+dnl [
+dnl if test "$enableval" != "no"; then
+dnl     AC_DEFINE(UTF8_SUPPORT, [], [Defined to build with UTF8 support])
+dnl fi
+dnl AM_CONDITIONAL([BUILD_LIBUNISTRING], [test $enableval = yes])
+dnl ])
+
 dnl
 dnl Experimental threading
 dnl

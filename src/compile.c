@@ -472,7 +472,7 @@ include_internal_defs(COMPSTATE *cstat)
 #endif
 
     /* Create standard server defines */
-    insert_def(cstat, "__version", VERSION);
+    insert_def(cstat, "__version", TINYVERSION);
     insert_def(cstat, "__neon", NEONVER);
     insert_def(cstat, "__proto", PROTOVER);
     insert_def(cstat, "strip", "striplead striptail");

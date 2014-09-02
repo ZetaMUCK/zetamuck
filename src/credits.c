@@ -40,7 +40,7 @@ const char *version = PATCHLEVEL;
 
 const char *infotext[] = {
 
-    CCYAN "ProtoMUCK " PROTOBASE " " CCRIMSON "-- " CCRIMSON VERSION,
+    CCYAN "ProtoMUCK " PROTOBASE " " CCRIMSON "-- " CCRIMSON TINYVERSION,
     " ",
     CCYAN "Based on the original code written by these programmers:",
     "  " CAQUA

@@ -123,13 +123,13 @@ process_telnet_IAC(struct descriptor_data *d, char *q, char *p, char *pend)
                     if ((pend - p) >= 3) {
                         *p++ = '\xC3';
                         *p++ = '\xBF';
-                        d->raw_input_wclen++;
+                        d->raw_input_mblength++;
                     }
                 } else if (d->encoding == ENC_IBM437 && (pend - p) >= 3) {
                     // escaped NBSP
                     *p++ = '\xC2';
                     *p++ = '\xA0';
-                    d->raw_input_wclen++;
+                    d->raw_input_mblength++;
 #endif
                 }
                 d->inIAC = 0;

@@ -1585,23 +1585,29 @@ alloc_string(const char *string)
  * alloc_prog_string unless you're passing in low-level I/O or something that
  * is similarly specialized, and verify your math in a C debugger before commit.
  *
- * uclength is directly assigned. -2 means unknown length, -1 is a UTF-8 coding
+ * mblength is directly assigned. -2 means unknown length, -1 is a UTF-8 coding
  * convetion indicates that the string contains invalid multi-byte characters.
  * Use -2 if you don't know what a "wide character" is and it'll work just fine.
- * We do not calculate uclength automatically for the user; this is done on
- * demand inside of the "uclength" function when the stored value is -2.
+ * We do not calculate mblength automatically for the user; this is done on
+ * demand inside of the "mblength" function when the stored value is -2.
  *
  * length is automatically caulcuated with strlen if the passed in value is <0,
- * but -2 is preferred because it matches the meaning of uclength. Use -2 unless
+ * but -2 is preferred because it matches the meaning of mblength. Use -2 unless
  * you're absolutely sure that your string match is accurate. (or better yet,
  * stick to using the alloc_prog_string(x) macro)
  *
  * Direct hate mail at brevantes.
  */
 struct shared_string *
-alloc_prog_string_exact(const char *s, int length, int uclength)
+alloc_prog_string_exact(const char *s, int length, int mblength)
 {
+    /* ss->length does not include the trailing null byte, but the character
+     * array does. u8_normalize discards trailing null bytes and must be used
+     * very, very carefully. */
     struct shared_string *ss;
+    const char *src = s;
+    char *p;
+    size_t newlength = length;
 
     if (s == NULL || *s == '\0' || length == 0)
         return (NULL);
@@ -1609,17 +1615,62 @@ alloc_prog_string_exact(const char *s, int length, int uclength)
     if (length < 0) {
         length = strlen(s);
     }
+
+#ifdef UTF8_SUPPORT
+    // normalize this string if mblength was -2
+    if (mblength == -2) {
+        src = (char *)u8_normalize(UNINORM_NFC, (uint8_t *)s, (size_t)length + 1, NULL, &newlength);
+        newlength--; // remove trailing null from the byte count
+        mblength = u8_mbsnlen((uint8_t *)src, newlength);
+    }
+#endif
+
     if ((ss = (struct shared_string *)
-        malloc(sizeof(struct shared_string) + length)) == NULL) {
+        malloc(sizeof(struct shared_string) + newlength)) == NULL) {
         fprintf(stderr, "PANIC: alloc_prog_string() Out of Memory.\n");
         abort();
     }
-    ss->links = 1;
-    ss->length = length;
+    if (mblength == -1) {
+        ss->raw = 1;
+    } else {
+        ss->raw = 0;
+    }
+
+    ss->length = newlength;
+    ss->mblength = newlength;
+    ss->columns = newlength;
+    bcopy(src, ss->data, ss->length + 1);
+
 #ifdef UTF8_SUPPORT
-    ss->uclength = uclength;
+    if (mblength >= 0) {
+        ss->mblength = mblength;
+
+        // pre-calculate the grapheme breaks
+        if (newlength > 0 && newlength != mblength) {
+            ss->grapheme_brks = (char *)malloc(newlength);
+            u8_grapheme_breaks((uint8_t *)src, newlength, ss->grapheme_brks);
+
+            // calculate number of grapheme clusters, this is the column count
+            ss->columns = 0;
+            for (p = ss->grapheme_brks; p != ss->grapheme_brks + newlength; p++) {
+                if (*p == 1) {
+                    ss->columns++;
+                }
+            }
+        } else {
+            ss->columns = newlength;
+            ss->grapheme_brks = NULL;
+        }
+    }
 #endif
-    bcopy(s, ss->data, ss->length + 1);
+
+    // if we needed u8_normalize, we ALLOC'd a new string. Get rid of it.
+    if (src != s) {
+        free((void *)src);
+    }
+
+    ss->links = 1;
+
     return (ss);
 }
 
@@ -1632,8 +1683,14 @@ sstring_free(struct shared_string *ss)
     /* Black magic. The size of a shared_string is malloc'd as the struct plus
      * the length of the string, and the string is written into the extra space.
      * Freeing the struct therefore frees the string. */
-    if (ss && --ss->links == 0)
+    if (ss && --ss->links == 0) {
+#ifdef UTF8_SUPPORT
+        if (ss->grapheme_brks) {
+            free((void *) ss->grapheme_brks);
+        }
+#endif
         free((void *) ss);
+    }
 }
 
 
@@ -2993,11 +3050,11 @@ int strnatcasecmp(nat_char const *a, nat_char const *b) {
 int
 wcharlen(struct shared_string *ss)
 {
-    if (ss->uclength == -2) {
+    if (ss->mblength == -2) {
         /* -2 is uninitialized. */
-        ss->uclength = mbstowcs(NULL, DoNullInd(ss), 0);
+        ss->mblength = mbstowcs(NULL, DoNullInd(ss), 0);
     }
-    return ss->uclength;
+    return ss->mblength;
 }
 
 
