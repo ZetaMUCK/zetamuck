@@ -589,6 +589,7 @@ prim_descr_setuser(PRIM_PROTOTYPE)
                 CLEAR(oper3);
                 result = 0;
                 PushInt(result);
+                return;
             }
         }
     }
