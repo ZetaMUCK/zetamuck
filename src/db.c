@@ -2125,8 +2125,13 @@ db_hash_password(int type, char *out, const char *password, const char *saltin)
         return 1;
     }
     if (!saltin || !*saltin) {
-        for (i = 0; i < 8; i++)
-            salt[i] = (unsigned char) (RANDOM() & 0xFF);
+        for (i = 0; i < 8; i++) {
+            salt[i] = (unsigned char) (RANDOM() & 0xFE) + 1;
+            // Don't include null bytes in the salt.
+            while (!salt[i]) {
+                salt[i] = (unsigned char) (RANDOM() & 0xFE) + 1;
+            }
+        }
         salt[8] = '\0';
     } else {
         memcpy(salt, saltin, 8);
