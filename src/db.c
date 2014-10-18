@@ -2126,10 +2126,10 @@ db_hash_password(int type, char *out, const char *password, const char *saltin)
     }
     if (!saltin || !*saltin) {
         for (i = 0; i < 8; i++) {
-            salt[i] = (unsigned char) (RANDOM() & 0xFF) + 1;
+            salt[i] = (unsigned char) (RANDOM() & 0xFF);
             // Don't include null bytes in the salt.
             while (!salt[i]) {
-                salt[i] = (unsigned char) (RANDOM() & 0xFF) + 1;
+                salt[i] = (unsigned char) (RANDOM() & 0xFF);
             }
         }
         salt[8] = '\0';
