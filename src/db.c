@@ -59,10 +59,18 @@ dbcheck(const char *file, int line, dbref item)
 dbref
 getparent(dbref obj)
 {
-    int limit = 88;
+    //int limit = 88;
 
     if (!OkObj(obj))
         return GLOBAL_ENVIRONMENT;
+
+    /* This behavior is undocumented in help.txt and causes problems for command
+     * prop lookups on vehicles. Given the perceiveed (lack of) usefulness for
+     * this behavior, it is being removed entirely. I can selectively phase it
+     * back in for certain calling functions if this turns out to be too drastic.
+     *
+     * https://code.google.com/p/zetamuck/issues/detail?id=23 */
+    /* 
     do {
         if (Typeof(obj) == TYPE_THING && (FLAGS(obj) & VEHICLE) && limit-- > 0) {
             obj = DBFETCH(obj)->sp.thing.home;
@@ -74,8 +82,12 @@ getparent(dbref obj)
             obj = getloc(obj);
         }
     } while (obj != NOTHING && Typeof(obj) == TYPE_THING);
+
     if (!limit)
         return GLOBAL_ENVIRONMENT;
+    */
+    obj = getloc(obj);
+    
     return obj;
 }
 
