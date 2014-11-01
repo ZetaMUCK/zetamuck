@@ -805,19 +805,23 @@ char *
 mesg_parse(int descr, dbref player, dbref what, dbref perms, const char *inbuf,
            char *outbuf, int maxchars, int mesgtyp)
 {
-    char wbuf[BUFFER_LEN];
-    char buf[BUFFER_LEN];
-    char buf2[BUFFER_LEN];
-    char dbuf[BUFFER_LEN];
-    char ebuf[BUFFER_LEN];
-    char cmdbuf[MAX_MFUN_NAME_LEN + 1];
-    char argv[9][BUFFER_LEN];
+    //char wbuf[BUFFER_LEN];
+    //char buf[BUFFER_LEN];
+    //char buf2[BUFFER_LEN];
+    //char dbuf[BUFFER_LEN];
+    //char ebuf[BUFFER_LEN];
+    //char cmdbuf[MAX_MFUN_NAME_LEN + 1];
+    //char argv[9][BUFFER_LEN];
+
     const char *ptr;
     const char *dptr;
     int p, q, s, i;
     bool showtextflag = 0;
     bool literalflag = 0;
     int argc;
+
+    // This is the only buffer we need at the outset.
+    char *dbuf = malloc(BUFFER_LEN);
 
     mesg_rec_cnt++;
     if (mesg_rec_cnt > 26) {
@@ -829,12 +833,15 @@ mesg_parse(int descr, dbref player, dbref what, dbref perms, const char *inbuf,
         mesg_rec_cnt--;
         outbuf[0] = '\0';
 
+        free(dbuf);
         return NULL;
     }
 
     if (OkObj(player) && Typeof(player) == TYPE_GARBAGE) {
         mesg_rec_cnt--;
         outbuf[0] = '\0';
+
+        free(dbuf);
         return NULL;
     }
 
@@ -843,8 +850,19 @@ mesg_parse(int descr, dbref player, dbref what, dbref perms, const char *inbuf,
         mesg_rec_cnt--;
         outbuf[0] = '\0';
 
+        free(dbuf);
         return NULL;
     }
+
+    // These buffers are now allocated from heap, not stack. The mbuf struct
+    // must be freed prior to return from this point onward.
+    struct mesg_parse_buffer *mbuf = malloc(sizeof (struct mesg_parse_buffer));
+    char *wbuf = mbuf->wbuf;
+    char *buf = mbuf->buf;
+    char *buf2 = mbuf->buf2;
+    char *ebuf = mbuf->ebuf;
+    char *cmdbuf = mbuf->cmdbuf;
+    char (*argv)[BUFFER_LEN] = mbuf->argv;
 
     strcpy(wbuf, inbuf);
     memset(outbuf, sizeof(outbuf), 0);
@@ -902,6 +920,8 @@ mesg_parse(int descr, dbref player, dbref what, dbref perms, const char *inbuf,
                                     (varflag ? cmdbuf : mfun_list[s].name),
                                     MFUN_ARGEND);
                             smnotify(descr, player, dbuf);
+                            free(dbuf);
+                            free(mbuf);
                             return NULL;
                         }
                         if (wbuf[p] == MFUN_ARGEND) {
@@ -928,6 +948,8 @@ mesg_parse(int descr, dbref player, dbref what, dbref perms, const char *inbuf,
                                         zptr, MFUN_LEADCHAR, cmdbuf,
                                         MFUN_ARGEND);
                                 smnotify(descr, player, ebuf);
+                                free(dbuf);
+                                free(mbuf);
                                 return NULL;
                             }
                         }
@@ -944,6 +966,8 @@ mesg_parse(int descr, dbref player, dbref what, dbref perms, const char *inbuf,
                                         MFUN_ARGEND);
                                 smnotify(descr, player, ebuf);
 
+                                free(dbuf);
+                                free(mbuf);
                                 return NULL;
                             }
                             strcpy(argv[0], zptr);
@@ -985,6 +1009,8 @@ mesg_parse(int descr, dbref player, dbref what, dbref perms, const char *inbuf,
                                             (varflag ? cmdbuf : mfun_list[s].
                                              name), MFUN_ARGEND, i + 1);
                                     smnotify(descr, player, dbuf);
+                                    free(dbuf);
+                                    free(mbuf);
                                     return NULL;
                                 }
                             }
@@ -1020,6 +1046,8 @@ mesg_parse(int descr, dbref player, dbref what, dbref perms, const char *inbuf,
                                     MFUN_ARGEND);
                             smnotify(descr, player, ebuf);
 
+                            free(dbuf);
+                            free(mbuf);
                             return NULL;
                         } else if (mfun_list[s].maxargs > 0 &&
                                    argc > mfun_list[s].maxargs) {
@@ -1031,6 +1059,8 @@ mesg_parse(int descr, dbref player, dbref what, dbref perms, const char *inbuf,
                                     MFUN_ARGEND);
                             smnotify(descr, player, ebuf);
 
+                            free(dbuf);
+                            free(mbuf);
                             return NULL;
                         } else {
                             ptr =
@@ -1038,6 +1068,8 @@ mesg_parse(int descr, dbref player, dbref what, dbref perms, const char *inbuf,
                                                  argc, argv, buf, mesgtyp);
                             if (!ptr) {
                                 outbuf[q] = '\0';
+                                free(dbuf);
+                                free(mbuf);
                                 return NULL;
                             }
 
@@ -1052,6 +1084,8 @@ mesg_parse(int descr, dbref player, dbref what, dbref perms, const char *inbuf,
                                              name), MFUN_ARGEND);
                                     smnotify(descr, player, ebuf);
 
+                                    free(dbuf);
+                                    free(mbuf);
                                     return NULL;
                                 }
                                 ptr = dptr;
@@ -1079,6 +1113,8 @@ mesg_parse(int descr, dbref player, dbref what, dbref perms, const char *inbuf,
                                         MFUN_ARGEND);
                                 smnotify(descr, player, ebuf);
 
+                                free(dbuf);
+                                free(mbuf);
                                 return NULL;
                             }
                         }
@@ -1094,6 +1130,8 @@ mesg_parse(int descr, dbref player, dbref what, dbref perms, const char *inbuf,
                                 zptr, MFUN_LEADCHAR, cmdbuf, MFUN_ARGEND);
                         smnotify(descr, player, ebuf);
 
+                        free(dbuf);
+                        free(mbuf);
                         return NULL;
                     }
                 } else {
@@ -1130,6 +1168,8 @@ mesg_parse(int descr, dbref player, dbref what, dbref perms, const char *inbuf,
         smnotify(descr, player, dbuf);
     }
     mesg_rec_cnt--;
+    free(dbuf);
+    free(mbuf);
     return (outbuf);
 }
 
@@ -1137,12 +1177,19 @@ char *
 do_parse_mesg_2(int descr, dbref player, dbref what, dbref perms,
                 const char *inbuf, const char *abuf, char *outbuf, int mesgtyp)
 {
+    //char howvar[BUFFER_LEN];
+    //char cmdvar[BUFFER_LEN];
+    //char argvar[BUFFER_LEN];
+    //char tmparg[BUFFER_LEN];
+    //char tmpcmd[BUFFER_LEN];
 
-    char howvar[BUFFER_LEN];
-    char cmdvar[BUFFER_LEN];
-    char argvar[BUFFER_LEN];
-    char tmparg[BUFFER_LEN];
-    char tmpcmd[BUFFER_LEN];
+    struct pm2_buffer *mbuf = malloc(sizeof (struct pm2_buffer));
+    char *howvar = mbuf->howvar;
+    char *cmdvar = mbuf->cmdvar;
+    char *argvar = mbuf->argvar;
+    char *tmparg = mbuf->tmparg;
+    char *tmpcmd = mbuf->tmpcmd;
+
     const char *dptr;
     int mvarcnt = varc;
     int mfunccnt = funcc;
@@ -1152,19 +1199,25 @@ do_parse_mesg_2(int descr, dbref player, dbref what, dbref perms,
     if (tp_do_mpi_parsing) {
         /* *outbuf = '\0'; */ memset(outbuf, sizeof(outbuf), 0);
         if ((mesgtyp & MPI_NOHOW) == 0) {
-            if (new_mvar("how", howvar))
+            if (new_mvar("how", howvar)) {
+                free(mbuf);
                 return outbuf;
+            }
             strcpy(howvar, abuf);
         }
 
-        if (new_mvar("cmd", cmdvar))
+        if (new_mvar("cmd", cmdvar)) {
+            free(mbuf);
             return outbuf;
+        }
 
         strcpy(cmdvar, match_cmdname);
         strcpy(tmpcmd, match_cmdname);
 
-        if (new_mvar("arg", argvar))
+        if (new_mvar("arg", argvar)) {
+            free(mbuf);
             return outbuf;
+        }
 
         strcpy(argvar, match_args);
         strcpy(tmparg, match_args);
@@ -1184,6 +1237,7 @@ do_parse_mesg_2(int descr, dbref player, dbref what, dbref perms,
     } else
         strcpy(outbuf, inbuf);
 
+    free(mbuf);
     return outbuf;
 }
 

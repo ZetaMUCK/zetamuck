@@ -59,6 +59,23 @@ extern bool new_mfunc(const char *funcname, const char *buf);
 extern const char *get_mfunc(const char *funcname);
 extern bool free_mfuncs(int downto);
 
+struct mesg_parse_buffer {
+    char wbuf[BUFFER_LEN];
+    char buf[BUFFER_LEN];
+    char buf2[BUFFER_LEN];
+    char dbuf[BUFFER_LEN];
+    char ebuf[BUFFER_LEN];
+    char cmdbuf[MAX_MFUN_NAME_LEN + 1];
+    char argv[9][BUFFER_LEN];
+};
+
+struct pm2_buffer {
+    char howvar[BUFFER_LEN];
+    char cmdvar[BUFFER_LEN];
+    char argvar[BUFFER_LEN];
+    char tmparg[BUFFER_LEN];
+    char tmpcmd[BUFFER_LEN];
+};
 
 
 #define MFUNARGS int descr, dbref player, dbref what, dbref perms, int argc, \
