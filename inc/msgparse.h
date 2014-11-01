@@ -59,8 +59,6 @@ extern bool new_mfunc(const char *funcname, const char *buf);
 extern const char *get_mfunc(const char *funcname);
 extern bool free_mfuncs(int downto);
 
-#define mesg_parse_free() free(dbuf); free(mbuf);
-
 struct mesg_parse_buffer {
     char wbuf[BUFFER_LEN];
     char buf[BUFFER_LEN];

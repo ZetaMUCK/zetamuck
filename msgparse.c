@@ -854,8 +854,8 @@ mesg_parse(int descr, dbref player, dbref what, dbref perms, const char *inbuf,
         return NULL;
     }
 
-    // These buffers are now allocated from heap, not stack. mesg_parse_free()
-    // must now be called prior to returning from this function.
+    // These buffers are now allocated from heap, not stack. The mbuf struct
+    // must be freed prior to return from this point onward.
     struct mesg_parse_buffer *mbuf = malloc(sizeof (struct mesg_parse_buffer));
     char *wbuf = mbuf->wbuf;
     char *buf = mbuf->buf;
@@ -920,7 +920,8 @@ mesg_parse(int descr, dbref player, dbref what, dbref perms, const char *inbuf,
                                     (varflag ? cmdbuf : mfun_list[s].name),
                                     MFUN_ARGEND);
                             smnotify(descr, player, dbuf);
-                            mesg_parse_free()
+                            free(dbuf);
+                            free(mbuf);
                             return NULL;
                         }
                         if (wbuf[p] == MFUN_ARGEND) {
@@ -947,7 +948,8 @@ mesg_parse(int descr, dbref player, dbref what, dbref perms, const char *inbuf,
                                         zptr, MFUN_LEADCHAR, cmdbuf,
                                         MFUN_ARGEND);
                                 smnotify(descr, player, ebuf);
-                                mesg_parse_free();
+                                free(dbuf);
+                                free(mbuf);
                                 return NULL;
                             }
                         }
@@ -964,7 +966,8 @@ mesg_parse(int descr, dbref player, dbref what, dbref perms, const char *inbuf,
                                         MFUN_ARGEND);
                                 smnotify(descr, player, ebuf);
 
-                                mesg_parse_free();
+                                free(dbuf);
+                                free(mbuf);
                                 return NULL;
                             }
                             strcpy(argv[0], zptr);
@@ -1006,7 +1009,8 @@ mesg_parse(int descr, dbref player, dbref what, dbref perms, const char *inbuf,
                                             (varflag ? cmdbuf : mfun_list[s].
                                              name), MFUN_ARGEND, i + 1);
                                     smnotify(descr, player, dbuf);
-                                    mesg_parse_free();
+                                    free(dbuf);
+                                    free(mbuf);
                                     return NULL;
                                 }
                             }
@@ -1042,7 +1046,8 @@ mesg_parse(int descr, dbref player, dbref what, dbref perms, const char *inbuf,
                                     MFUN_ARGEND);
                             smnotify(descr, player, ebuf);
 
-                            mesg_parse_free();
+                            free(dbuf);
+                            free(mbuf);
                             return NULL;
                         } else if (mfun_list[s].maxargs > 0 &&
                                    argc > mfun_list[s].maxargs) {
@@ -1054,7 +1059,8 @@ mesg_parse(int descr, dbref player, dbref what, dbref perms, const char *inbuf,
                                     MFUN_ARGEND);
                             smnotify(descr, player, ebuf);
 
-                            mesg_parse_free();
+                            free(dbuf);
+                            free(mbuf);
                             return NULL;
                         } else {
                             ptr =
@@ -1062,7 +1068,8 @@ mesg_parse(int descr, dbref player, dbref what, dbref perms, const char *inbuf,
                                                  argc, argv, buf, mesgtyp);
                             if (!ptr) {
                                 outbuf[q] = '\0';
-                                mesg_parse_free();
+                                free(dbuf);
+                                free(mbuf);
                                 return NULL;
                             }
 
@@ -1077,7 +1084,8 @@ mesg_parse(int descr, dbref player, dbref what, dbref perms, const char *inbuf,
                                              name), MFUN_ARGEND);
                                     smnotify(descr, player, ebuf);
 
-                                    mesg_parse_free();
+                                    free(dbuf);
+                                    free(mbuf);
                                     return NULL;
                                 }
                                 ptr = dptr;
@@ -1105,7 +1113,8 @@ mesg_parse(int descr, dbref player, dbref what, dbref perms, const char *inbuf,
                                         MFUN_ARGEND);
                                 smnotify(descr, player, ebuf);
 
-                                mesg_parse_free();
+                                free(dbuf);
+                                free(mbuf);
                                 return NULL;
                             }
                         }
@@ -1121,7 +1130,8 @@ mesg_parse(int descr, dbref player, dbref what, dbref perms, const char *inbuf,
                                 zptr, MFUN_LEADCHAR, cmdbuf, MFUN_ARGEND);
                         smnotify(descr, player, ebuf);
 
-                        mesg_parse_free();
+                        free(dbuf);
+                        free(mbuf);
                         return NULL;
                     }
                 } else {
@@ -1158,7 +1168,8 @@ mesg_parse(int descr, dbref player, dbref what, dbref perms, const char *inbuf,
         smnotify(descr, player, dbuf);
     }
     mesg_rec_cnt--;
-    mesg_parse_free();
+    free(dbuf);
+    free(mbuf);
     return (outbuf);
 }
 
