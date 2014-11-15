@@ -71,11 +71,11 @@ riderparent(dbref obj)
         return loc;
     }
 
-    if (Typeof(loc) == TYPE_THING && (FLAGS(loc) & VEHICLE)) {
+    if (Typeof(loc) == TYPE_THING & (FLAGS(loc) & VEHICLE)) {
         loc = DBFETCH(loc)->sp.thing.home;
 
         if (loc == NIL)
-            return GLOBAL_ENVIRONMENT;
+            return tp_default_parent;
 
         if (Typeof(loc) == TYPE_PLAYER)
             return DBFETCH(loc)->sp.player.home;
