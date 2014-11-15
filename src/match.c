@@ -568,18 +568,25 @@ match_all_exits(struct match_data *md)
         return;
 
     /* if player is in a vehicle, use environment of vehicle's home */
+
     if (Typeof(loc) == TYPE_THING) {
+        /* 
         loc = DBFETCH(loc)->sp.thing.home;
         if (loc == NOTHING)
             return;
-	if (loc == NIL)
-	    loc = tp_default_parent;
+        if (loc == NIL)
+            loc = tp_default_parent;
         if (md->exact_match != NOTHING)
             md->block_equals = 1;
+        */
+
+        /* This is an attempt to make command searching emulate the same
+         * behavior as getparent(). -davin */
+        loc = riderparent(md->match_from);
         match_room_exits(loc, md);
     }
 
-    while ((loc = DBFETCH(loc)->location) != NOTHING) {
+    while ((loc = getparent(loc)) != NOTHING) {
         if (md->exact_match != NOTHING)
             md->block_equals = 1;
         match_room_exits(loc, md);

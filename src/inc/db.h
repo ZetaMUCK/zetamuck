@@ -1110,6 +1110,7 @@ extern struct line * read_program(dbref);
 extern struct line * get_new_line(void);
 extern int fetch_propvals(dbref obj, const char *dir);
 
+extern dbref riderparent(dbref obj);
 extern dbref getparent(dbref obj);
 
 extern dbref db_write_deltas(FILE *f);

@@ -57,36 +57,51 @@ dbcheck(const char *file, int line, dbref item)
 #endif /* DBDEBUG */
 
 dbref
-getparent(dbref obj)
+riderparent(dbref obj)
 {
-    //int limit = 88;
+    dbref loc;
 
-    if (!OkObj(obj))
+    if (!OkObj(obj) || Typeof(obj) == TYPE_GARBAGE)
         return GLOBAL_ENVIRONMENT;
 
-    /* This behavior is undocumented in help.txt and causes problems for command
-     * prop lookups on vehicles. Given the perceiveed (lack of) usefulness for
-     * this behavior, it is being removed entirely. I can selectively phase it
-     * back in for certain calling functions if this turns out to be too drastic.
-     *
-     * https://code.google.com/p/zetamuck/issues/detail?id=23 */
-    /* 
+    loc = getloc(obj);
+
+    if (!OkObj(loc)) {
+        /* The most common case is #-1 (NOTHING), the parent of #0. */
+        return loc;
+    }
+
+    if (Typeof(loc) == TYPE_THING && (FLAGS(loc) & VEHICLE)) {
+        loc = DBFETCH(loc)->sp.thing.home;
+
+        if (loc == NIL)
+            return GLOBAL_ENVIRONMENT;
+
+        if (Typeof(loc) == TYPE_PLAYER)
+            return DBFETCH(loc)->sp.player.home;
+
+        return loc;
+    }
+
+    return getloc(obj);
+
+}
+
+
+dbref
+getparent(dbref obj)
+{
+    int limit = 88;
+
+    if (!OkObj(obj) || Typeof(obj) == TYPE_GARBAGE)
+        return GLOBAL_ENVIRONMENT;
+
     do {
-        if (Typeof(obj) == TYPE_THING && (FLAGS(obj) & VEHICLE) && limit-- > 0) {
-            obj = DBFETCH(obj)->sp.thing.home;
-            if (obj == NIL)
-                obj = GLOBAL_ENVIRONMENT;
-            if (obj != NOTHING && Typeof(obj) == TYPE_PLAYER)
-                obj = DBFETCH(obj)->sp.player.home;
-        } else {
-            obj = getloc(obj);
-        }
-    } while (obj != NOTHING && Typeof(obj) == TYPE_THING);
+        obj = riderparent(obj);
+    } while (obj != NOTHING && Typeof(obj) == TYPE_THING && limit--);
 
     if (!limit)
         return GLOBAL_ENVIRONMENT;
-    */
-    obj = getloc(obj);
     
     return obj;
 }

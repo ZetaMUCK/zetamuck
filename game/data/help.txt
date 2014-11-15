@@ -2067,6 +2067,20 @@ instead of it's @desc, and you will not be shown it's @succ or @fail.
 Objects dropped in a vehicle will not go away to the their homes, as a
 vehicle cannot have a dropto set in it.
 
+Other limitations of vehicle objects include:
+ 
+* You cannot enter a vehicle that is @linked to yourself.
+* Exits attached to a vehicle can be used by both occupants and people in
+  the same room as the vehicle. To restrict these exits to occupants of the
+  vehicle, they should be @locked to the dbref of the vehicle itself.
+* Occupants of a vehicle do not trigger exits or propqueues located in the
+  room of the vehicle. Instead, they trigger ones that are located on the object
+  the vehicle is @linked to. (the exception is when a vehicle is @linked to a
+  player: it will use the home of the player instead)
+* Reminder: Objects are @linked to the room they were created in by default,
+  which means it's still possible to use exits attached to that room from inside
+  of the vehicle. (usually by accident)
+
 Exits set VEHICLE cannot be used by objects of type thing that are also set
 VEHICLE.
 
