@@ -71,7 +71,7 @@ riderparent(dbref obj)
         return loc;
     }
 
-    if (Typeof(loc) == TYPE_THING & (FLAGS(loc) & VEHICLE)) {
+    if (Typeof(loc) == TYPE_THING && (FLAGS(loc) & VEHICLE)) {
         loc = DBFETCH(loc)->sp.thing.home;
 
         if (loc == NIL)
