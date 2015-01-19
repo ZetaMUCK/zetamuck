@@ -1826,13 +1826,14 @@ next_word(COMPSTATE *cstat, const char *token)
         new_word = object_word(cstat, token);
     else if (quoted(cstat, token))
         new_word = quoted_word(cstat, token + 1);
-    else if (quoted_label(cstat, token))
-        new_word = quoted_label_word(cstat, token + 1);
-    else if (quoted_note(cstat, token))
-        new_word = quoted_note_word(cstat, token + 1);
-    else if (label(token))
-        new_word = label_word(cstat, token);
-    else {
+    else if (cstat->procs) {
+        if (quoted_label(cstat, token))
+            new_word = quoted_label_word(cstat, token + 1);
+        else if (quoted_note(cstat, token))
+            new_word = quoted_note_word(cstat, token + 1);
+        else if (label(token))
+            new_word = label_word(cstat, token);
+    } else {
         sprintf(buf, "Unrecognized word %s.", token);
         abort_compile(cstat, buf);
     }
@@ -4315,19 +4316,19 @@ jump(COMPSTATE *cstat, const char *token)
 /* see if it's a quoted procedure name */ int
 quoted(COMPSTATE *cstat, const char *token)
 {
-    return (*token == '\'' && call(cstat, token + 1));
+    return (cstat->procs && *token == '\'' && call(cstat, token + 1));
 }
 
 /* see if it's a quoted label name */ int
 quoted_label(COMPSTATE *cstat, const char *token)
 {
-    return (*token == '\'' && jump(cstat, token + 1));
+    return (cstat->procs && *token == '\'' && jump(cstat, token + 1));
 }
 
 /* see if it's a quoted label name */ int
 quoted_note(COMPSTATE *cstat, const char *token)
 {
-    return (*token == '\'');
+    return (cstat->procs && *token == '\'');
 }
 
 /* see if it's an object # */
