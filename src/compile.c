@@ -4316,19 +4316,19 @@ jump(COMPSTATE *cstat, const char *token)
 /* see if it's a quoted procedure name */ int
 quoted(COMPSTATE *cstat, const char *token)
 {
-    return (cstat->procs && *token == '\'' && call(cstat, token + 1));
+    return (*token == '\'' && call(cstat, token + 1));
 }
 
 /* see if it's a quoted label name */ int
 quoted_label(COMPSTATE *cstat, const char *token)
 {
-    return (cstat->procs && *token == '\'' && jump(cstat, token + 1));
+    return (*token == '\'' && jump(cstat, token + 1));
 }
 
 /* see if it's a quoted label name */ int
 quoted_note(COMPSTATE *cstat, const char *token)
 {
-    return (cstat->procs && *token == '\'');
+    return (*token == '\'');
 }
 
 /* see if it's an object # */
