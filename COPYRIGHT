@@ -1,13 +1,12 @@
 /**************************************************************************
- *  ProtoMuck
- *  Copyright (c) 2000 by Chris Brine, and Richard Taylor
+ *  ZetaMuck
+ *  Copyright (c) 2016 by Andrew Boling
  *  All rights reserved
  *
  *  Contact addresses
- *     Chris Brine      - Moose/Van - ashitaka@home.com
- *     Richard Taylor   - Akari     - Nakoruru08@hotmail.com
+ *     Andrew Boling    - Davin     - davin@wordpainter.net
  *
- *  This code is based loosely on the following code
+ *  This code is based significantly on the following code
  *     TinyMUD
  *     Copyright (c) 1989, 1990 by David Applegate, James Aspnes, Timothy
  *                                 Freeman, Bennet Yee, and Na Choon Piaw
@@ -16,6 +15,9 @@
  *
  *     NeonMUCK
  *     Copyright (c) 1996 by Jeremy Blackman, Andrew Nelson, and Joseph L. Traub
+ *
+ *     ProtoMuck
+ *     Copyright (c) 2000 by Chris Brine, and Richard Taylor
  *
  *  This code supports the Pueblo multimedia protocol
  *  Copyright (c) 1995, 1996 by Chaco Communications
