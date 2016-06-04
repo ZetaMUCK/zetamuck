@@ -1854,7 +1854,8 @@ do_flags(int descr, dbref player, const char *args)
     int lmlev;
     char *orig[2];
 
-    char *buf=(char *)malloc(256);
+    int bufsize = 256;
+    char *buf=(char *)malloc(bufsize);
     char *lname=(char *)malloc(32);
     
     /* Sanity */
@@ -1905,12 +1906,12 @@ do_flags(int descr, dbref player, const char *args)
     }
 
     /* Now we do the actual work. */
-    buf = orig[0]; memset(buf, 0, sizeof(buf));
+    buf = orig[0]; memset(buf, 0, bufsize);
     pdat.flags = PROP_STRTYP;
     pdat.data.str = lname;
     sprintf(buf, "@flags/%d/name", lflag);
     set_property(0, buf, &pdat);
-    buf = orig[0]; memset(buf, 0, sizeof(buf));
+    buf = orig[0]; memset(buf, 0, bufsize);
     pdat.flags = PROP_INTTYP;
     pdat.data.val = lmlev;
     sprintf(buf, "@flags/%d/mlev", lflag);

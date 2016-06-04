@@ -827,7 +827,7 @@ mesg_parse(int descr, dbref player, dbref what, dbref perms, const char *inbuf,
     if (mesg_rec_cnt > 26) {
         char *zptr = get_mvar("how");
 
-        snprintf(dbuf, sizeof(dbuf), "%s Recursion limit exceeded.", zptr);
+        snprintf(dbuf, BUFFER_LEN, "%s Recursion limit exceeded.", zptr);
         smnotify(descr, player, dbuf);
 
         mesg_rec_cnt--;
@@ -865,7 +865,7 @@ mesg_parse(int descr, dbref player, dbref what, dbref perms, const char *inbuf,
     char (*argv)[BUFFER_LEN] = mbuf->argv;
 
     strcpy(wbuf, inbuf);
-    memset(outbuf, sizeof(outbuf), 0);
+    memset(outbuf, 0, maxchars);
     for (p = q = 0; wbuf[p] && (p < maxchars - 1) && q < (maxchars - 1); p++) {
         if (wbuf[p] == '\\') {
             p++;
@@ -1197,7 +1197,7 @@ do_parse_mesg_2(int descr, dbref player, dbref what, dbref perms,
     int tmpinst_cnt = mesg_instr_cnt;
 
     if (tp_do_mpi_parsing) {
-        /* *outbuf = '\0'; */ memset(outbuf, sizeof(outbuf), 0);
+        /* *outbuf = '\0'; */ memset(outbuf, 0, strlen(outbuf));
         if ((mesgtyp & MPI_NOHOW) == 0) {
             if (new_mvar("how", howvar)) {
                 free(mbuf);

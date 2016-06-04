@@ -1792,7 +1792,7 @@ struct INTERMEDIATE *modprim_word(COMPSTATE *cstat, const char *token);
 struct INTERMEDIATE *
 next_word(COMPSTATE *cstat, const char *token)
 {
-    struct INTERMEDIATE *new_word;
+    struct INTERMEDIATE *new_word = NULL;
     static char buf[BUFFER_LEN];
 
     if (!token)

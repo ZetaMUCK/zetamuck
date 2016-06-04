@@ -788,6 +788,10 @@ prim_parsempi(PRIM_PROTOTYPE)
 
     temp = (oper1->data.string)? oper1->data.string->data : (const char *) "";
     ptr  = (char *) ((oper2->data.string)? (char *) oper2->data.string->data : "");
+    // Initialize the buffer, necessary for the strlen() workaround I'm using to
+    // repair someone's broken attempt at flushing the MPI output buffer.
+    buf[0] = '\0';
+
     if(temp && *temp && ptr) {
 	result = oper4->data.number & (~MPI_ISLISTENER);
         ptr = do_parse_mesg(fr->descr, player, oper3->data.objref, temp,
