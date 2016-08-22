@@ -5,13 +5,13 @@ PORTS="";
 
 # Start/stop the netmuck server.
 
-HOME=$HOME
+GAMEDIR=$HOME
 
 case "$1" in
-start)	$HOME/proto/game/restart $PORTS ;;
-on)	$HOME/proto/game/restart $PORTS ;;
-stop)	kill `cat $HOME/proto/game/protomuck.pid` ;;
-off)	kill `cat $HOME/proto/game/protomuck.pid` ;;
+start)	$GAMEDIR/proto/game/restart $PORTS ;;
+on)	$GAMEDIR/proto/game/restart $PORTS ;;
+stop)	kill `cat $GAMEDIR/proto/game/protomuck.pid` ;;
+off)	kill `cat $GAMEDIR/proto/game/protomuck.pid` ;;
 *)	echo "Usage: $0 start|stop"; exit 1 ;;
 esac
 exit 0
